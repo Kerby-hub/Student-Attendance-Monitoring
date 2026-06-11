@@ -87,7 +87,9 @@ function LoginPage() {
     if (error) {
       toast.error("Sign up failed", { description: error });
     } else {
-      toast.success("Account created!", { description: "You're now signed in." });
+      toast.success("Account created!", {
+        description: "Email confirmation is disabled in development — you can sign in immediately.",
+      });
     }
   };
 

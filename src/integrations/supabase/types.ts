@@ -465,13 +465,59 @@ export type Database = {
         }
         Relationships: []
       }
+      student_profiles: {
+        Row: {
+          address: string | null
+          birthdate: string | null
+          created_at: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          gender: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          birthdate?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          gender?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          birthdate?: string | null
+          created_at?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          gender?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_profiles_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           contact_number: string | null
           created_at: string
+          email: string | null
+          first_name: string | null
           full_name: string
           id: string
+          last_name: string | null
+          middle_name: string | null
           parent_contact: string | null
+          profile_picture_url: string | null
           program: string | null
           section_id: string | null
           status: Database["public"]["Enums"]["student_status"]
@@ -483,9 +529,14 @@ export type Database = {
         Insert: {
           contact_number?: string | null
           created_at?: string
+          email?: string | null
+          first_name?: string | null
           full_name: string
           id?: string
+          last_name?: string | null
+          middle_name?: string | null
           parent_contact?: string | null
+          profile_picture_url?: string | null
           program?: string | null
           section_id?: string | null
           status?: Database["public"]["Enums"]["student_status"]
@@ -497,9 +548,14 @@ export type Database = {
         Update: {
           contact_number?: string | null
           created_at?: string
+          email?: string | null
+          first_name?: string | null
           full_name?: string
           id?: string
+          last_name?: string | null
+          middle_name?: string | null
           parent_contact?: string | null
+          profile_picture_url?: string | null
           program?: string | null
           section_id?: string | null
           status?: Database["public"]["Enums"]["student_status"]
@@ -723,7 +779,7 @@ export type Database = {
         | "sunday"
       session_status: "waiting" | "open" | "closed" | "expired"
       sms_status: "pending" | "sent" | "failed"
-      student_status: "active" | "inactive" | "graduated"
+      student_status: "active" | "inactive" | "graduated" | "archived"
       teacher_status: "active" | "inactive"
     }
     CompositeTypes: {
@@ -866,7 +922,7 @@ export const Constants = {
       ],
       session_status: ["waiting", "open", "closed", "expired"],
       sms_status: ["pending", "sent", "failed"],
-      student_status: ["active", "inactive", "graduated"],
+      student_status: ["active", "inactive", "graduated", "archived"],
       teacher_status: ["active", "inactive"],
     },
   },

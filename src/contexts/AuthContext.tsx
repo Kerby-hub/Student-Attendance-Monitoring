@@ -8,6 +8,8 @@ export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
+  must_change_password: boolean;
+  status: string;
 }
 
 interface AuthContextValue {
@@ -19,8 +21,8 @@ interface AuthContextValue {
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -32,10 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load profile + roles for the authenticated user
   const loadUserData = async (userId: string) => {
     const [{ data: profileData }, { data: rolesData }] = await Promise.all([
-      supabase.from("profiles").select("id, email, full_name").eq("id", userId).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, email, full_name, must_change_password, status")
+        .eq("id", userId)
+        .maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
     setProfile(profileData as Profile | null);
@@ -43,12 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // CRITICAL: subscribe FIRST, then fetch session — avoids missing events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        // Defer profile fetch to avoid deadlock with Supabase callback
         setTimeout(() => loadUserData(newSession.user.id), 0);
       } else {
         setProfile(null);
@@ -70,21 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
-  };
-
-  const signUp = async (email: string, password: string, fullName: string, role: AppRole) => {
-    const redirectUrl = `${window.location.origin}/dashboard`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { full_name: fullName, role },
-      },
-    });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    // Block inactive users immediately
+    if (data.user) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      if (prof?.status === "inactive") {
+        await supabase.auth.signOut();
+        return { error: "Your account is inactive. Please contact an administrator." };
+      }
+    }
+    return { error: null };
   };
 
   const signOut = async () => {
@@ -93,12 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRoles([]);
   };
 
+  const refreshProfile = async () => {
+    if (user) await loadUserData(user.id);
+  };
+
   const hasRole = (role: AppRole) => roles.includes(role);
   const hasAnyRole = (target: AppRole[]) => target.some((r) => roles.includes(r));
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signIn, signUp, signOut }}
+      value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signIn, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

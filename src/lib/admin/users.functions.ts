@@ -1,0 +1,178 @@
+/**
+ * Admin server functions for user provisioning.
+ * Only callable by users with the 'admin' role. All actions are audit-logged.
+ */
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+type CreateUserInput = {
+  email: string;
+  password: string;
+  fullName: string;
+  role: "admin" | "teacher" | "student";
+  status: "active" | "inactive";
+  studentData?: {
+    student_no: string;
+    program?: string;
+    year_level?: number;
+    section_id?: string | null;
+    contact_number?: string;
+    parent_contact?: string;
+  };
+  teacherData?: {
+    teacher_no: string;
+    department_id?: string | null;
+    position?: string;
+    contact_number?: string;
+  };
+};
+
+async function assertAdmin(supabase: any, userId: string) {
+  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (!data) throw new Error("Forbidden: admin role required.");
+}
+
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: CreateUserInput) => data)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1) Create auth user
+    const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName, role: data.role },
+    });
+    if (createErr || !created.user) throw new Error(createErr?.message ?? "Failed to create user");
+    const newUserId = created.user.id;
+
+    // 2) Mark profile as needing password change + status (handle_new_user trigger already inserted profile+role)
+    await supabaseAdmin.from("profiles").update({
+      must_change_password: true,
+      status: data.status,
+      full_name: data.fullName,
+    }).eq("id", newUserId);
+
+    // 3) Ensure role is correct (trigger reads metadata, but be defensive)
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
+    await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: data.role });
+
+    // 4) Role-specific record
+    if (data.role === "student" && data.studentData) {
+      await supabaseAdmin.from("students").insert({
+        user_id: newUserId,
+        student_no: data.studentData.student_no,
+        full_name: data.fullName,
+        email: data.email,
+        program: data.studentData.program ?? null,
+        year_level: data.studentData.year_level ?? null,
+        section_id: data.studentData.section_id ?? null,
+        contact_number: data.studentData.contact_number ?? null,
+        parent_contact: data.studentData.parent_contact ?? null,
+        status: data.status,
+      });
+    } else if (data.role === "teacher" && data.teacherData) {
+      await supabaseAdmin.from("teachers").insert({
+        user_id: newUserId,
+        teacher_no: data.teacherData.teacher_no,
+        full_name: data.fullName,
+        email: data.email,
+        department_id: data.teacherData.department_id ?? null,
+        position: data.teacherData.position ?? null,
+        status: data.status,
+      });
+    }
+
+    // 5) Audit log
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "user_created",
+      entity_type: "auth.users",
+      entity_id: newUserId,
+      metadata: { email: data.email, role: data.role, status: data.status },
+    });
+
+    return { ok: true, userId: newUserId };
+  });
+
+export const adminResetPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { userId: string; newPassword: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      password: data.newPassword,
+    });
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("profiles").update({ must_change_password: true }).eq("id", data.userId);
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "password_reset",
+      entity_type: "auth.users",
+      entity_id: data.userId,
+      metadata: {},
+    });
+    return { ok: true };
+  });
+
+export const adminSetStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { userId: string; status: "active" | "inactive" }) => data)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("profiles").update({ status: data.status }).eq("id", data.userId);
+    // mirror to student/teacher rows
+    await supabaseAdmin.from("students").update({ status: data.status }).eq("user_id", data.userId);
+    await supabaseAdmin.from("teachers").update({ status: data.status }).eq("user_id", data.userId);
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: data.status === "inactive" ? "user_deactivated" : "user_activated",
+      entity_type: "auth.users",
+      entity_id: data.userId,
+      metadata: { status: data.status },
+    });
+    return { ok: true };
+  });
+
+export const adminSetRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { userId: string; role: "admin" | "teacher" | "student" }) => data)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
+    await supabaseAdmin.from("user_roles").insert({ user_id: data.userId, role: data.role });
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "role_changed",
+      entity_type: "auth.users",
+      entity_id: data.userId,
+      metadata: { role: data.role },
+    });
+    return { ok: true };
+  });
+
+export const adminDeleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { userId: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.userId === context.userId) throw new Error("You cannot delete your own account.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "user_deleted",
+      entity_type: "auth.users",
+      entity_id: data.userId,
+      metadata: {},
+    });
+    return { ok: true };
+  });

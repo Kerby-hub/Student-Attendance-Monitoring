@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-export const Route = createFileRoute("/student/attendance")({
+export const Route = createFileRoute("/student/history")({
   component: StudentAttendancePage,
 });
 

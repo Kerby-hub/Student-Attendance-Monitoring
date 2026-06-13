@@ -12,7 +12,7 @@ export const Route = createFileRoute("/teacher/")({
   component: TeacherDashboard,
 });
 
-const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 function TeacherDashboard() {
   const { user, hasRole } = useAuth();

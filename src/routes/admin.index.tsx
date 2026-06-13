@@ -1,21 +1,35 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Users, GraduationCap, BookOpen, CalendarClock, UserCheck, CheckCircle2, Clock, XCircle } from "lucide-react";
+import {
+  Users, GraduationCap, BookOpen, CalendarClock,
+  CheckCircle2, Clock, XCircle, Radio,
+} from "lucide-react";
+import {
+  ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboardPage,
 });
 
+const PIE_COLORS = ["hsl(var(--chart-1, 145 60% 42%))", "hsl(var(--chart-2, 38 92% 50%))", "hsl(var(--chart-3, 0 72% 51%))"];
+
 const COUNTS = [
-  { key: "teachers", label: "Teachers", icon: Users, to: "/admin/teachers" },
+  { key: "teachers", label: "Total Teachers", icon: Users, to: "/admin/teachers" },
   { key: "students", label: "Total Students", icon: GraduationCap, to: "/admin/students" },
   { key: "subjects", label: "Subjects", icon: BookOpen, to: "/admin/subjects" },
   { key: "class_schedules", label: "Schedules", icon: CalendarClock, to: "/admin/schedules" },
 ] as const;
+
+function todayRangeISO() {
+  const start = new Date(); start.setHours(0,0,0,0);
+  const end = new Date(start); end.setDate(end.getDate() + 1);
+  return [start.toISOString(), end.toISOString()] as const;
+}
 
 function AdminDashboardPage() {
   const { data: counts } = useQuery({
@@ -24,39 +38,140 @@ function AdminDashboardPage() {
       const totals = await Promise.all(
         COUNTS.map((c) => supabase.from(c.key).select("*", { count: "exact", head: true }).then((r) => r.count ?? 0)),
       );
-      const { count: active } = await supabase
-        .from("students").select("*", { count: "exact", head: true }).eq("status", "active");
       const out = Object.fromEntries(COUNTS.map((c, i) => [c.key, totals[i]])) as Record<string, number>;
-      out.active_students = active ?? 0;
       return out;
     },
   });
 
-  const { data: attendance = [] } = useQuery({
-    queryKey: ["admin-attendance-30d"],
+  const { data: activeSessions = 0 } = useQuery({
+    queryKey: ["admin-active-sessions"],
     queryFn: async () => {
-      const since = new Date(); since.setDate(since.getDate() - 30);
+      const { count } = await supabase.from("attendance_sessions")
+        .select("*", { count: "exact", head: true }).in("status", ["open","waiting"]);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: today = [] } = useQuery({
+    queryKey: ["admin-today"],
+    queryFn: async () => {
+      const [from, to] = todayRangeISO();
       const { data, error } = await supabase
-        .from("attendance_records").select("status, check_in_at")
-        .gte("check_in_at", since.toISOString());
+        .from("attendance_records").select("status")
+        .gte("created_at", from).lt("created_at", to);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 60000,
+  });
+
+  const todayStats = useMemo(() => ({
+    present: today.filter((r) => r.status === "present").length,
+    late: today.filter((r) => r.status === "late").length,
+    absent: today.filter((r) => r.status === "absent").length,
+  }), [today]);
+
+  const { data: monthly = [] } = useQuery({
+    queryKey: ["admin-attendance-90d"],
+    queryFn: async () => {
+      const since = new Date(); since.setDate(since.getDate() - 90);
+      const { data, error } = await supabase
+        .from("attendance_records").select("status, created_at")
+        .gte("created_at", since.toISOString());
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  const attStats = useMemo(() => {
-    const total = attendance.length;
-    const present = attendance.filter((a) => a.status === "present").length;
-    const late = attendance.filter((a) => a.status === "late").length;
-    const absent = attendance.filter((a) => a.status === "absent").length;
-    return { total, present, late, absent, pct: total ? Math.round(((present + late) / total) * 100) : 0 };
-  }, [attendance]);
+  const monthlyTrend = useMemo(() => {
+    const months = new Map<string, { name: string; present: number; late: number; absent: number }>();
+    for (let i = 2; i >= 0; i--) {
+      const d = new Date(); d.setMonth(d.getMonth() - i); d.setDate(1);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      months.set(k, { name: d.toLocaleDateString(undefined, { month: "short" }), present: 0, late: 0, absent: 0 });
+    }
+    monthly.forEach((r) => {
+      const d = new Date(r.created_at);
+      const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const m = months.get(k); if (!m) return;
+      if (r.status === "present") m.present++;
+      else if (r.status === "late") m.late++;
+      else if (r.status === "absent") m.absent++;
+    });
+    return Array.from(months.values());
+  }, [monthly]);
+
+  const dailyTrend = useMemo(() => {
+    const days = new Map<string, { name: string; present: number; late: number; absent: number }>();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+      const k = d.toISOString().slice(0,10);
+      days.set(k, { name: `${d.getMonth()+1}/${d.getDate()}`, present: 0, late: 0, absent: 0 });
+    }
+    monthly.forEach((r) => {
+      const k = new Date(r.created_at).toISOString().slice(0,10);
+      const day = days.get(k); if (!day) return;
+      if (r.status === "present") day.present++;
+      else if (r.status === "late") day.late++;
+      else if (r.status === "absent") day.absent++;
+    });
+    return Array.from(days.values());
+  }, [monthly]);
+
+  const { data: bySubject = [] } = useQuery({
+    queryKey: ["admin-by-subject"],
+    queryFn: async () => {
+      const since = new Date(); since.setDate(since.getDate() - 30);
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("status, attendance_sessions(class_schedules(subjects(code)))")
+        .gte("created_at", since.toISOString());
+      if (error) throw error;
+      const map = new Map<string, { name: string; present: number; total: number }>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data ?? []).forEach((r: any) => {
+        const code = r.attendance_sessions?.class_schedules?.subjects?.code ?? "—";
+        const m = map.get(code) ?? { name: code, present: 0, total: 0 };
+        m.total++;
+        if (r.status === "present" || r.status === "late") m.present++;
+        map.set(code, m);
+      });
+      return Array.from(map.values()).map((m) => ({ name: m.name, rate: Math.round((m.present / m.total) * 100) })).slice(0, 8);
+    },
+  });
+
+  const { data: bySection = [] } = useQuery({
+    queryKey: ["admin-by-section"],
+    queryFn: async () => {
+      const since = new Date(); since.setDate(since.getDate() - 30);
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("status, students(sections(name))")
+        .gte("created_at", since.toISOString());
+      if (error) throw error;
+      const map = new Map<string, { name: string; value: number }>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data ?? []).forEach((r: any) => {
+        const name = r.students?.sections?.name ?? "—";
+        const m = map.get(name) ?? { name, value: 0 };
+        m.value++; map.set(name, m);
+      });
+      return Array.from(map.values()).sort((a,b) => b.value - a.value).slice(0, 8);
+    },
+  });
+
+  const distribution = useMemo(() => ([
+    { name: "Present", value: monthly.filter((r) => r.status === "present").length },
+    { name: "Late", value: monthly.filter((r) => r.status === "late").length },
+    { name: "Absent", value: monthly.filter((r) => r.status === "absent").length },
+  ]), [monthly]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Overview of your attendance monitoring system.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Real-time overview of attendance across the institution.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -73,50 +188,125 @@ function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Radio} label="Active Sessions" value={activeSessions} tone="text-primary" />
+        <StatCard icon={CheckCircle2} label="Present Today" value={todayStats.present} tone="text-green-600" />
+        <StatCard icon={Clock} label="Late Today" value={todayStats.late} tone="text-yellow-600" />
+        <StatCard icon={XCircle} label="Absent Today" value={todayStats.absent} tone="text-destructive" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Students</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{counts?.active_students ?? "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              of {counts?.students ?? "—"} total registered
-            </p>
+          <CardHeader><CardTitle>Monthly attendance trend</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                <Legend />
+                <Line type="monotone" dataKey="present" stroke="#16a34a" strokeWidth={2} />
+                <Line type="monotone" dataKey="late" stroke="#eab308" strokeWidth={2} />
+                <Line type="monotone" dataKey="absent" stroke="#dc2626" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Attendance summary <span className="ml-2 text-xs font-normal text-muted-foreground">last 30 days</span></CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-3">
-              <Mini icon={CheckCircle2} label="Present" value={attStats.present} tone="text-green-600" />
-              <Mini icon={Clock} label="Late" value={attStats.late} tone="text-yellow-600" />
-              <Mini icon={XCircle} label="Absent" value={attStats.absent} tone="text-destructive" />
-            </div>
-            <div className="mt-4">
-              <div className="mb-1 flex justify-between text-sm">
-                <span className="text-muted-foreground">Attendance rate</span>
-                <span className="font-semibold">{attStats.pct}%</span>
-              </div>
-              <Progress value={attStats.pct} />
-              <p className="mt-1 text-xs text-muted-foreground">{attStats.total} records analyzed.</p>
-            </div>
+        <Card>
+          <CardHeader><CardTitle>Daily attendance (last 14 days)</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyTrend}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                <Legend />
+                <Bar dataKey="present" stackId="a" fill="#16a34a" />
+                <Bar dataKey="late" stackId="a" fill="#eab308" />
+                <Bar dataKey="absent" stackId="a" fill="#dc2626" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle>Attendance rate by subject (30d)</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            {bySubject.length === 0 ? (
+              <EmptyChart />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={bySubject} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis type="number" domain={[0, 100]} className="text-xs" />
+                  <YAxis dataKey="name" type="category" className="text-xs" width={70} />
+                  <Tooltip formatter={(v) => `${v}%`} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                  <Bar dataKey="rate" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Status distribution</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            {distribution.every((d) => d.value === 0) ? (
+              <EmptyChart />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={distribution} dataKey="value" nameKey="name" outerRadius={80} label>
+                    {distribution.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Records by section (30d)</CardTitle></CardHeader>
+        <CardContent className="h-72">
+          {bySection.length === 0 ? (
+            <EmptyChart />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={bySection}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" className="text-xs" />
+                <YAxis className="text-xs" />
+                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function Mini({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: string }) {
+function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: string }) {
   return (
-    <div className="rounded-lg border bg-muted/30 p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-3.5 w-3.5" />{label}</div>
-      <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
-    </div>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        <Icon className={`h-4 w-4 ${tone}`} />
+      </CardHeader>
+      <CardContent><div className={`text-3xl font-bold ${tone}`}>{value}</div></CardContent>
+    </Card>
   );
+}
+
+function EmptyChart() {
+  return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data in the selected range.</div>;
 }

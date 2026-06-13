@@ -27,7 +27,7 @@ import { Route as TeacherReportsRouteImport } from './routes/teacher.reports'
 import { Route as TeacherNotificationsRouteImport } from './routes/teacher.notifications'
 import { Route as TeacherAttendanceRouteImport } from './routes/teacher.attendance'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
-import { Route as StudentAttendanceRouteImport } from './routes/student.attendance'
+import { Route as StudentHistoryRouteImport } from './routes/student.history'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTeachersRouteImport } from './routes/admin.teachers'
 import { Route as AdminSubjectsRouteImport } from './routes/admin.subjects'
@@ -133,9 +133,9 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
-const StudentAttendanceRoute = StudentAttendanceRouteImport.update({
-  id: '/attendance',
-  path: '/attendance',
+const StudentHistoryRoute = StudentHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => StudentRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -233,7 +233,7 @@ export interface FileRoutesByFullPath {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
-  '/student/attendance': typeof StudentAttendanceRoute
+  '/student/history': typeof StudentHistoryRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -265,7 +265,7 @@ export interface FileRoutesByTo {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
-  '/student/attendance': typeof StudentAttendanceRoute
+  '/student/history': typeof StudentHistoryRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -301,7 +301,7 @@ export interface FileRoutesById {
   '/admin/subjects': typeof AdminSubjectsRoute
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
-  '/student/attendance': typeof StudentAttendanceRoute
+  '/student/history': typeof StudentHistoryRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -338,7 +338,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/teachers'
     | '/admin/users'
-    | '/student/attendance'
+    | '/student/history'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -370,7 +370,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/teachers'
     | '/admin/users'
-    | '/student/attendance'
+    | '/student/history'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -405,7 +405,7 @@ export interface FileRouteTypes {
     | '/admin/subjects'
     | '/admin/teachers'
     | '/admin/users'
-    | '/student/attendance'
+    | '/student/history'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -559,11 +559,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentProfileRouteImport
       parentRoute: typeof StudentRoute
     }
-    '/student/attendance': {
-      id: '/student/attendance'
-      path: '/attendance'
-      fullPath: '/student/attendance'
-      preLoaderRoute: typeof StudentAttendanceRouteImport
+    '/student/history': {
+      id: '/student/history'
+      path: '/history'
+      fullPath: '/student/history'
+      preLoaderRoute: typeof StudentHistoryRouteImport
       parentRoute: typeof StudentRoute
     }
     '/admin/users': {
@@ -714,13 +714,13 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface StudentRouteChildren {
-  StudentAttendanceRoute: typeof StudentAttendanceRoute
+  StudentHistoryRoute: typeof StudentHistoryRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentIndexRoute: typeof StudentIndexRoute
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
-  StudentAttendanceRoute: StudentAttendanceRoute,
+  StudentHistoryRoute: StudentHistoryRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentIndexRoute: StudentIndexRoute,
 }

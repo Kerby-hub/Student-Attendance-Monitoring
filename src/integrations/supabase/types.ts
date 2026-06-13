@@ -357,6 +357,8 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          must_change_password: boolean
+          status: string
           updated_at: string
         }
         Insert: {
@@ -364,6 +366,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          must_change_password?: boolean
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -371,6 +375,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          must_change_password?: boolean
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -618,6 +624,27 @@ export type Database = {
           },
         ]
       }
+      system_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       teacher_sections: {
         Row: {
           created_at: string
@@ -763,6 +790,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      rotate_session_qr: { Args: { _session_id: string }; Returns: string }
+      student_check_in: {
+        Args: { _lat: number; _lng: number; _qr_token: string }
+        Returns: Json
       }
     }
     Enums: {

@@ -1,33 +1,35 @@
 import { useEffect, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { FullPageLoader } from "./LoadingSpinner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** If provided, only users with at least one of these roles can view. */
   allowedRoles?: AppRole[];
 }
 
-/**
- * Guards a route: redirects unauthenticated users to /login,
- * and shows Access Denied for users without the required role(s).
- */
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, hasAnyRole } = useAuth();
+  const { user, profile, loading, hasAnyRole } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       navigate({ to: "/login", replace: true });
+      return;
     }
-  }, [loading, user, navigate]);
+    // Force temp-password change on first login
+    if (profile?.must_change_password && pathname !== "/change-password") {
+      navigate({ to: "/change-password", replace: true });
+    }
+  }, [loading, user, profile, pathname, navigate]);
 
   if (loading) return <FullPageLoader />;
   if (!user) return null;
+  if (profile?.must_change_password && pathname !== "/change-password") return <FullPageLoader />;
 
   if (allowedRoles && allowedRoles.length > 0 && !hasAnyRole(allowedRoles)) {
-    // Render Access Denied inline (keeps URL — easier for the user)
     return <AccessDeniedInline />;
   }
 

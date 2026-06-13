@@ -1,31 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  BookOpen,
-  CalendarClock,
-  Building2,
-  Layers,
-  MapPin,
-  Bell,
-  FileBarChart,
-  Settings,
+  LayoutDashboard, Users, GraduationCap, BookOpen, CalendarClock, Building2, Layers,
+  MapPin, Bell, FileBarChart, Settings, UserCog, ScrollText,
 } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
 const manage = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
+  { title: "Users", url: "/admin/users", icon: UserCog },
   { title: "Teachers", url: "/admin/teachers", icon: Users },
   { title: "Students", url: "/admin/students", icon: GraduationCap },
   { title: "Subjects", url: "/admin/subjects", icon: BookOpen },
@@ -35,10 +20,11 @@ const manage = [
 ];
 
 const system = [
-  { title: "Geofencing", url: "/admin/geofences", icon: MapPin, disabled: true },
-  { title: "Notifications", url: "/admin/notifications", icon: Bell, disabled: true },
-  { title: "Reports", url: "/admin/reports", icon: FileBarChart, disabled: true },
-  { title: "Settings", url: "/admin/settings", icon: Settings, disabled: true },
+  { title: "Geofencing", url: "/admin/geofencing", icon: MapPin },
+  { title: "Notifications", url: "/admin/notifications", icon: Bell },
+  { title: "Reports", url: "/admin/reports", icon: FileBarChart },
+  { title: "Audit logs", url: "/admin/audit-logs", icon: ScrollText },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -51,7 +37,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground font-bold">
-            SA
+            S
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">SAMS Admin</p>
@@ -79,14 +65,16 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>System (coming soon)</SidebarGroupLabel>
+          <SidebarGroupLabel>System</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {system.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton disabled className="opacity-50">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <Link to={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

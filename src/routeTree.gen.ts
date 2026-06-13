@@ -27,6 +27,9 @@ import { Route as TeacherReportsRouteImport } from './routes/teacher.reports'
 import { Route as TeacherNotificationsRouteImport } from './routes/teacher.notifications'
 import { Route as TeacherAttendanceRouteImport } from './routes/teacher.attendance'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
+import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
+import { Route as StudentHistoryRouteImport } from './routes/student.history'
+import { Route as StudentCalendarRouteImport } from './routes/student.calendar'
 import { Route as StudentAttendanceRouteImport } from './routes/student.attendance'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminTeachersRouteImport } from './routes/admin.teachers'
@@ -133,6 +136,21 @@ const StudentProfileRoute = StudentProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => StudentRoute,
 } as any)
+const StudentNotificationsRoute = StudentNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentHistoryRoute = StudentHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => StudentRoute,
+} as any)
+const StudentCalendarRoute = StudentCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => StudentRoute,
+} as any)
 const StudentAttendanceRoute = StudentAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
@@ -234,6 +252,9 @@ export interface FileRoutesByFullPath {
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
   '/student/attendance': typeof StudentAttendanceRoute
+  '/student/calendar': typeof StudentCalendarRoute
+  '/student/history': typeof StudentHistoryRoute
+  '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -266,6 +287,9 @@ export interface FileRoutesByTo {
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
   '/student/attendance': typeof StudentAttendanceRoute
+  '/student/calendar': typeof StudentCalendarRoute
+  '/student/history': typeof StudentHistoryRoute
+  '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -302,6 +326,9 @@ export interface FileRoutesById {
   '/admin/teachers': typeof AdminTeachersRoute
   '/admin/users': typeof AdminUsersRoute
   '/student/attendance': typeof StudentAttendanceRoute
+  '/student/calendar': typeof StudentCalendarRoute
+  '/student/history': typeof StudentHistoryRoute
+  '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
@@ -339,6 +366,9 @@ export interface FileRouteTypes {
     | '/admin/teachers'
     | '/admin/users'
     | '/student/attendance'
+    | '/student/calendar'
+    | '/student/history'
+    | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -371,6 +401,9 @@ export interface FileRouteTypes {
     | '/admin/teachers'
     | '/admin/users'
     | '/student/attendance'
+    | '/student/calendar'
+    | '/student/history'
+    | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -406,6 +439,9 @@ export interface FileRouteTypes {
     | '/admin/teachers'
     | '/admin/users'
     | '/student/attendance'
+    | '/student/calendar'
+    | '/student/history'
+    | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
     | '/teacher/notifications'
@@ -557,6 +593,27 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/student/profile'
       preLoaderRoute: typeof StudentProfileRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/notifications': {
+      id: '/student/notifications'
+      path: '/notifications'
+      fullPath: '/student/notifications'
+      preLoaderRoute: typeof StudentNotificationsRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/history': {
+      id: '/student/history'
+      path: '/history'
+      fullPath: '/student/history'
+      preLoaderRoute: typeof StudentHistoryRouteImport
+      parentRoute: typeof StudentRoute
+    }
+    '/student/calendar': {
+      id: '/student/calendar'
+      path: '/calendar'
+      fullPath: '/student/calendar'
+      preLoaderRoute: typeof StudentCalendarRouteImport
       parentRoute: typeof StudentRoute
     }
     '/student/attendance': {
@@ -715,12 +772,18 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface StudentRouteChildren {
   StudentAttendanceRoute: typeof StudentAttendanceRoute
+  StudentCalendarRoute: typeof StudentCalendarRoute
+  StudentHistoryRoute: typeof StudentHistoryRoute
+  StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentProfileRoute: typeof StudentProfileRoute
   StudentIndexRoute: typeof StudentIndexRoute
 }
 
 const StudentRouteChildren: StudentRouteChildren = {
   StudentAttendanceRoute: StudentAttendanceRoute,
+  StudentCalendarRoute: StudentCalendarRoute,
+  StudentHistoryRoute: StudentHistoryRoute,
+  StudentNotificationsRoute: StudentNotificationsRoute,
   StudentProfileRoute: StudentProfileRoute,
   StudentIndexRoute: StudentIndexRoute,
 }

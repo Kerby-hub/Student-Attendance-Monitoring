@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -35,6 +37,7 @@ type Schedule = {
   subjects?: { code: string; name: string } | null;
   teachers?: { full_name: string } | null;
   sections?: { name: string } | null;
+  schedule_geofences?: { zone_id: string; geofence_zones: { name: string } | null }[];
 };
 
 const empty = {
@@ -49,13 +52,14 @@ function SchedulesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [form, setForm] = useState(empty);
+  const [zoneIds, setZoneIds] = useState<string[]>([]);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["schedules"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_schedules")
-        .select("*, subjects(code,name), teachers(full_name), sections(name)")
+        .select("*, subjects(code,name), teachers(full_name), sections(name), schedule_geofences(zone_id, geofence_zones(name))")
         .order("school_year", { ascending: false })
         .order("day")
         .order("start_time");
@@ -76,22 +80,37 @@ function SchedulesPage() {
     queryKey: ["sections-for-schedule"],
     queryFn: async () => (await supabase.from("sections").select("id, name, school_year").order("name")).data ?? [],
   });
+  const { data: zones = [] } = useQuery({
+    queryKey: ["zones-for-schedule"],
+    queryFn: async () => (await supabase.from("geofence_zones").select("id, name, radius_meters").eq("active", true).order("name")).data ?? [],
+  });
 
   const upsert = useMutation({
     mutationFn: async () => {
       const payload = { ...form, room: form.room || null };
+      let scheduleId: string;
       if (editing) {
         const { error } = await supabase.from("class_schedules").update(payload).eq("id", editing.id);
         if (error) throw error;
+        scheduleId = editing.id;
       } else {
-        const { error } = await supabase.from("class_schedules").insert(payload);
+        const { data: created, error } = await supabase.from("class_schedules").insert(payload).select("id").single();
         if (error) throw error;
+        scheduleId = created.id;
+      }
+      // Sync geofence links
+      const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", scheduleId);
+      if (delErr) throw delErr;
+      if (zoneIds.length > 0) {
+        const { error: insErr } = await supabase.from("schedule_geofences")
+          .insert(zoneIds.map((zid) => ({ schedule_id: scheduleId, zone_id: zid })));
+        if (insErr) throw insErr;
       }
     },
     onSuccess: () => {
       toast.success(editing ? "Schedule updated" : "Schedule created");
       qc.invalidateQueries({ queryKey: ["schedules"] });
-      setOpen(false); setEditing(null); setForm(empty);
+      setOpen(false); setEditing(null); setForm(empty); setZoneIds([]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -105,7 +124,7 @@ function SchedulesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openCreate = () => { setEditing(null); setForm(empty); setOpen(true); };
+  const openCreate = () => { setEditing(null); setForm(empty); setZoneIds([]); setOpen(true); };
   const openEdit = (s: Schedule) => {
     setEditing(s);
     setForm({
@@ -114,14 +133,21 @@ function SchedulesPage() {
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
     });
+    setZoneIds(s.schedule_geofences?.map((g) => g.zone_id) ?? []);
     setOpen(true);
+  };
+
+  useEffect(() => { if (!open) { setZoneIds([]); } }, [open]);
+
+  const toggleZone = (id: string) => {
+    setZoneIds((prev) => prev.includes(id) ? prev.filter((z) => z !== id) : [...prev, id]);
   };
 
   return (
     <div>
       <PageHeader
         title="Class Schedules"
-        description="Assign teachers, subjects, and sections to time slots."
+        description="Assign teachers, subjects, sections, and geofence zones to time slots."
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New schedule</Button></DialogTrigger>
@@ -161,6 +187,28 @@ function SchedulesPage() {
                 <div><Label>End</Label><Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
                 <div><Label>Semester</Label><Input value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} placeholder="1st" /></div>
                 <div><Label>School year</Label><Input value={form.school_year} onChange={(e) => setForm({ ...form, school_year: e.target.value })} placeholder="2025-2026" /></div>
+
+                <div className="sm:col-span-2">
+                  <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Allowed geofence zones</Label>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Students may only check in when located inside one of the selected zones. Leave empty to disable geofence enforcement for this class.
+                  </p>
+                  {zones.length === 0 ? (
+                    <p className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      No active geofence zones yet. Create one in <strong>Geofencing</strong> first.
+                    </p>
+                  ) : (
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+                      {zones.map((z) => (
+                        <label key={z.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted">
+                          <Checkbox checked={zoneIds.includes(z.id)} onCheckedChange={() => toggleZone(z.id)} />
+                          <span className="flex-1">{z.name}</span>
+                          <span className="text-xs text-muted-foreground">{z.radius_meters}m</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -180,14 +228,15 @@ function SchedulesPage() {
               <TableHead>Day</TableHead><TableHead>Time</TableHead>
               <TableHead>Subject</TableHead><TableHead>Teacher</TableHead>
               <TableHead>Section</TableHead><TableHead>Room</TableHead>
+              <TableHead>Geofence</TableHead>
               <TableHead>Term</TableHead><TableHead className="w-24"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
             ) : data.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="capitalize">{s.day}</TableCell>
@@ -199,6 +248,20 @@ function SchedulesPage() {
                 <TableCell>{s.teachers?.full_name}</TableCell>
                 <TableCell>{s.sections?.name}</TableCell>
                 <TableCell>{s.room ?? "—"}</TableCell>
+                <TableCell>
+                  {s.schedule_geofences && s.schedule_geofences.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {s.schedule_geofences.slice(0, 2).map((g) => (
+                        <Badge key={g.zone_id} variant="outline" className="text-xs">
+                          <MapPin className="mr-1 h-3 w-3" />{g.geofence_zones?.name ?? "—"}
+                        </Badge>
+                      ))}
+                      {s.schedule_geofences.length > 2 && <Badge variant="outline" className="text-xs">+{s.schedule_geofences.length - 2}</Badge>}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">None</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{s.semester} · {s.school_year}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>

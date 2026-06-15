@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarClock, Building2, Layers,
-  MapPin, Bell, FileBarChart, Settings, UserCog, ScrollText,
+  MapPin, Bell, FileBarChart, Settings, UserCog, ScrollText, Smartphone,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -20,6 +20,7 @@ const manage = [
 ];
 
 const system = [
+  { title: "Devices", url: "/admin/devices", icon: Smartphone },
   { title: "Geofencing", url: "/admin/geofencing", icon: MapPin },
   { title: "Notifications", url: "/admin/notifications", icon: Bell },
   { title: "Reports", url: "/admin/reports", icon: FileBarChart },

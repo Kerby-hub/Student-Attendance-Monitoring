@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   Users, GraduationCap, BookOpen, CalendarClock,
-  CheckCircle2, Clock, XCircle, Radio,
+  CheckCircle2, Clock, XCircle, Radio, Smartphone, Percent,
 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -11,16 +11,17 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/StatCard";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboardPage,
 });
 
-const PIE_COLORS = ["hsl(var(--chart-1, 145 60% 42%))", "hsl(var(--chart-2, 38 92% 50%))", "hsl(var(--chart-3, 0 72% 51%))"];
+const PIE_COLORS = ["oklch(0.69 0.17 162)", "oklch(0.78 0.17 70)", "oklch(0.58 0.22 27)"];
 
 const COUNTS = [
-  { key: "teachers", label: "Total Teachers", icon: Users, to: "/admin/teachers" },
-  { key: "students", label: "Total Students", icon: GraduationCap, to: "/admin/students" },
+  { key: "teachers", label: "Teachers", icon: Users, to: "/admin/teachers" },
+  { key: "students", label: "Students", icon: GraduationCap, to: "/admin/students" },
   { key: "subjects", label: "Subjects", icon: BookOpen, to: "/admin/subjects" },
   { key: "class_schedules", label: "Schedules", icon: CalendarClock, to: "/admin/schedules" },
 ] as const;

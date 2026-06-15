@@ -70,8 +70,11 @@ function StudentsPage() {
     student_no: "", first_name: "", last_name: "", middle_name: "",
     email: "", contact_number: "", program: "", year_level: "1",
     section_id: "" as string,
+    temp_password: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const createUserFn = useServerFn(adminCreateUser);
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],

@@ -305,6 +305,11 @@ function UsersPage() {
                   <Button variant="ghost" size="icon" title="Reset password" onClick={() => resetPwd.mutate(u)}>
                     <KeyRound className="h-4 w-4" />
                   </Button>
+                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => {
+                    if (confirm(`Reset device binding for ${u.email}? They will register a new device on next login.`)) resetDevice.mutate(u);
+                  }}>
+                    <Smartphone className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" title="Toggle status" onClick={() => toggleStatus.mutate(u)}>
                     {u.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                   </Button>

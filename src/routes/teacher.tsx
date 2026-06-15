@@ -1,10 +1,8 @@
-import { createFileRoute, Outlet, Link } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { TeacherSidebar } from "@/components/TeacherSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { Topbar } from "@/components/Topbar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/teacher")({
   component: () => (
@@ -15,27 +13,12 @@ export const Route = createFileRoute("/teacher")({
 });
 
 function TeacherShell() {
-  const { profile, signOut } = useAuth();
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <TeacherSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b bg-background/95 px-4 backdrop-blur">
-            <div className="flex items-center gap-2 min-w-0">
-              <SidebarTrigger />
-              <span className="hidden truncate text-sm font-medium text-muted-foreground sm:inline">
-                Teacher Portal
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Link to="/dashboard" className="text-sm text-muted-foreground hover:underline">Exit</Link>
-              <span className="hidden text-sm text-muted-foreground sm:inline">{profile?.email}</span>
-              <Button variant="outline" size="sm" onClick={() => signOut()}>
-                <LogOut className="mr-1.5 h-4 w-4" /> Sign out
-              </Button>
-            </div>
-          </header>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar portal="Teacher Portal" />
           <main className="flex-1 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </main>

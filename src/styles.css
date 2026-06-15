@@ -28,6 +28,17 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -39,71 +50,102 @@
 :root {
   --radius: 0.625rem;
 
-  /* Deep navy + emerald — professional academic palette */
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.18 0.04 260);
+  /* Surfaces — light slate */
+  --background: oklch(0.985 0.004 250);     /* #F8FAFC */
+  --foreground: oklch(0.20 0.04 260);       /* slate-900 / navy ink */
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.04 260);
+  --card-foreground: oklch(0.20 0.04 260);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.04 260);
+  --popover-foreground: oklch(0.20 0.04 260);
 
-  /* Deep navy primary */
-  --primary: oklch(0.28 0.09 260);
+  /* Royal Blue #2563EB — primary action */
+  --primary: oklch(0.55 0.22 264);
   --primary-foreground: oklch(0.99 0.005 250);
-  --primary-glow: oklch(0.45 0.13 260);
+  --primary-glow: oklch(0.66 0.20 264);
 
-  --secondary: oklch(0.96 0.012 250);
-  --secondary-foreground: oklch(0.25 0.06 260);
+  /* Navy brand #0F172A — sidebar / topbar / brand chrome */
+  --brand: oklch(0.20 0.04 260);
+  --brand-foreground: oklch(0.99 0.005 250);
 
-  --muted: oklch(0.97 0.008 250);
-  --muted-foreground: oklch(0.5 0.025 260);
+  --secondary: oklch(0.965 0.012 250);
+  --secondary-foreground: oklch(0.25 0.05 260);
+
+  --muted: oklch(0.965 0.008 250);
+  --muted-foreground: oklch(0.5 0.03 255);  /* slate-500 #64748B */
 
   /* Emerald accent */
-  --accent: oklch(0.95 0.05 160);
-  --accent-foreground: oklch(0.32 0.12 160);
+  --accent: oklch(0.96 0.04 162);
+  --accent-foreground: oklch(0.40 0.13 162);
 
+  /* Status */
   --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-
-  --success: oklch(0.62 0.16 155);
+  --success: oklch(0.69 0.17 162);          /* #10B981 */
   --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.17 70);           /* #F59E0B */
+  --warning-foreground: oklch(0.20 0.05 70);
+  --info: oklch(0.62 0.18 240);
+  --info-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.92 0.012 250);
   --input: oklch(0.94 0.012 250);
-  --ring: oklch(0.45 0.13 260);
+  --ring: oklch(0.55 0.22 264);
 
-  --gradient-hero: linear-gradient(135deg, oklch(0.25 0.08 260) 0%, oklch(0.4 0.13 250) 100%);
-  --gradient-subtle: linear-gradient(180deg, oklch(0.99 0.005 250), oklch(0.96 0.012 250));
-  --shadow-elegant: 0 10px 40px -12px oklch(0.28 0.09 260 / 0.25);
-  --shadow-card: 0 1px 3px 0 oklch(0.18 0.04 260 / 0.05), 0 1px 2px -1px oklch(0.18 0.04 260 / 0.05);
-  --shadow-card-hover: 0 4px 12px -2px oklch(0.18 0.04 260 / 0.08), 0 2px 4px -1px oklch(0.18 0.04 260 / 0.05);
+  /* Sidebar tokens — deep navy */
+  --sidebar: oklch(0.20 0.04 260);
+  --sidebar-foreground: oklch(0.92 0.012 250);
+  --sidebar-accent: oklch(0.27 0.06 260);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar-border: oklch(0.30 0.05 260);
+  --sidebar-ring: oklch(0.55 0.22 264);
+
+  /* Gradients & shadows */
+  --gradient-hero: linear-gradient(135deg, oklch(0.20 0.04 260) 0%, oklch(0.34 0.12 264) 100%);
+  --gradient-brand: linear-gradient(135deg, oklch(0.55 0.22 264), oklch(0.66 0.20 264));
+  --gradient-subtle: linear-gradient(180deg, oklch(0.99 0.005 250), oklch(0.965 0.012 250));
+  --shadow-elegant: 0 10px 40px -12px oklch(0.20 0.04 260 / 0.25);
+  --shadow-card: 0 1px 2px 0 oklch(0.20 0.04 260 / 0.04), 0 1px 3px 0 oklch(0.20 0.04 260 / 0.06);
+  --shadow-card-hover: 0 6px 16px -4px oklch(0.20 0.04 260 / 0.10), 0 2px 6px -1px oklch(0.20 0.04 260 / 0.06);
+  --shadow-pop: 0 20px 40px -16px oklch(0.20 0.04 260 / 0.30);
 }
 
 .dark {
-  --background: oklch(0.14 0.03 260);
+  --background: oklch(0.16 0.03 260);
   --foreground: oklch(0.97 0.01 250);
-  --card: oklch(0.2 0.04 260);
+  --card: oklch(0.22 0.04 260);
   --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.2 0.04 260);
+  --popover: oklch(0.22 0.04 260);
   --popover-foreground: oklch(0.97 0.01 250);
-  --primary: oklch(0.72 0.14 260);
+  --primary: oklch(0.68 0.18 264);
   --primary-foreground: oklch(0.16 0.04 260);
-  --primary-glow: oklch(0.78 0.13 260);
-  --secondary: oklch(0.26 0.04 260);
+  --primary-glow: oklch(0.76 0.16 264);
+  --brand: oklch(0.14 0.03 260);
+  --brand-foreground: oklch(0.97 0.01 250);
+  --secondary: oklch(0.28 0.04 260);
   --secondary-foreground: oklch(0.97 0.01 250);
-  --muted: oklch(0.24 0.03 260);
-  --muted-foreground: oklch(0.7 0.03 250);
-  --accent: oklch(0.3 0.08 160);
-  --accent-foreground: oklch(0.95 0.05 160);
+  --muted: oklch(0.26 0.03 260);
+  --muted-foreground: oklch(0.72 0.03 250);
+  --accent: oklch(0.32 0.08 162);
+  --accent-foreground: oklch(0.95 0.05 162);
   --destructive: oklch(0.65 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.7 0.15 155);
-  --success-foreground: oklch(0.99 0 0);
+  --success: oklch(0.72 0.16 162);
+  --success-foreground: oklch(0.14 0.03 260);
+  --warning: oklch(0.80 0.16 70);
+  --warning-foreground: oklch(0.20 0.05 70);
+  --info: oklch(0.68 0.16 240);
+  --info-foreground: oklch(0.99 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.14 260);
+  --ring: oklch(0.68 0.18 264);
+  --sidebar: oklch(0.14 0.03 260);
+  --sidebar-foreground: oklch(0.92 0.012 250);
+  --sidebar-accent: oklch(0.22 0.05 260);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.68 0.18 264);
 }
 
 @layer base {
@@ -120,4 +162,10 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+}
+
+@utility scrollbar-thin {
+  &::-webkit-scrollbar { width: 8px; height: 8px; }
+  &::-webkit-scrollbar-thumb { background: oklch(0.85 0.012 250); border-radius: 8px; }
+  &::-webkit-scrollbar-thumb:hover { background: oklch(0.75 0.02 250); }
 }

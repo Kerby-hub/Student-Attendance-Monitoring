@@ -41,6 +41,7 @@ import { Route as AdminSchedulesRouteImport } from './routes/admin.schedules'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminGeofencingRouteImport } from './routes/admin.geofencing'
+import { Route as AdminDevicesRouteImport } from './routes/admin.devices'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin.audit-logs'
 import { Route as TeacherAttendanceSessionScheduleIdRouteImport } from './routes/teacher.attendance-session.$scheduleId'
@@ -206,6 +207,11 @@ const AdminGeofencingRoute = AdminGeofencingRouteImport.update({
   path: '/geofencing',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDevicesRoute = AdminDevicesRouteImport.update({
+  id: '/devices',
+  path: '/devices',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
@@ -241,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/devices': typeof AdminDevicesRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/devices': typeof AdminDevicesRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/departments': typeof AdminDepartmentsRoute
+  '/admin/devices': typeof AdminDevicesRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/admin/audit-logs'
     | '/admin/departments'
+    | '/admin/devices'
     | '/admin/geofencing'
     | '/admin/notifications'
     | '/admin/reports'
@@ -390,6 +400,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/admin/audit-logs'
     | '/admin/departments'
+    | '/admin/devices'
     | '/admin/geofencing'
     | '/admin/notifications'
     | '/admin/reports'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/admin/audit-logs'
     | '/admin/departments'
+    | '/admin/devices'
     | '/admin/geofencing'
     | '/admin/notifications'
     | '/admin/reports'
@@ -693,6 +705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGeofencingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/devices': {
+      id: '/admin/devices'
+      path: '/devices'
+      fullPath: '/admin/devices'
+      preLoaderRoute: typeof AdminDevicesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/departments': {
       id: '/admin/departments'
       path: '/departments'
@@ -739,6 +758,7 @@ const AdminStudentsRouteWithChildren = AdminStudentsRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminAuditLogsRoute: typeof AdminAuditLogsRoute
   AdminDepartmentsRoute: typeof AdminDepartmentsRoute
+  AdminDevicesRoute: typeof AdminDevicesRoute
   AdminGeofencingRoute: typeof AdminGeofencingRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminReportsRoute: typeof AdminReportsRoute
@@ -755,6 +775,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditLogsRoute: AdminAuditLogsRoute,
   AdminDepartmentsRoute: AdminDepartmentsRoute,
+  AdminDevicesRoute: AdminDevicesRoute,
   AdminGeofencingRoute: AdminGeofencingRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminReportsRoute: AdminReportsRoute,

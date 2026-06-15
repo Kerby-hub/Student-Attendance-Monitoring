@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { StudentDeviceCard } from "@/components/StudentDeviceCard";
 
 export const Route = createFileRoute("/student/")({
   component: StudentDashboard,
@@ -117,14 +118,17 @@ function StudentDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Attendance rate</CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{stats.pct}%</p>
-            <Progress className="mt-3" value={stats.pct} />
-            <p className="mt-2 text-xs text-muted-foreground">Based on {stats.total} recent classes.</p>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle>Attendance rate</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">{stats.pct}%</p>
+              <Progress className="mt-3" value={stats.pct} />
+              <p className="mt-2 text-xs text-muted-foreground">Based on {stats.total} recent classes.</p>
+            </CardContent>
+          </Card>
+          <StudentDeviceCard />
+        </div>
       </div>
 
       <Card>

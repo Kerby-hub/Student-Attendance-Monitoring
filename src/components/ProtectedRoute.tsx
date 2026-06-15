@@ -2,6 +2,8 @@ import { useEffect, type ReactNode } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { FullPageLoader } from "./LoadingSpinner";
+import { useDeviceGuard } from "@/hooks/useDeviceGuard";
+
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -12,6 +14,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const { user, profile, loading, hasAnyRole } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  useDeviceGuard(!!user && !!profile && !profile.must_change_password);
 
   useEffect(() => {
     if (loading) return;

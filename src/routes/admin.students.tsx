@@ -306,20 +306,47 @@ function StudentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {!editing && (
+                  <div className="sm:col-span-2">
+                    <Label>Temporary password</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.temp_password}
+                        onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
+                        placeholder="Auto-generated"
+                        className="font-mono"
+                      />
+                      <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
+                        <RefreshCw className="mr-1.5 h-4 w-4" />Generate
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Student will be required to change this on first login.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => upsert.mutate()}
-                  disabled={!form.student_no || !form.first_name || !form.last_name || upsert.isPending}
+                  disabled={!form.student_no || !form.first_name || !form.last_name || (!editing && !form.email) || upsert.isPending}
                 >
-                  {editing ? "Save changes" : "Create student"}
+                  {upsert.isPending ? "Saving…" : editing ? "Save changes" : "Create student"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         }
       />
+
+      <TempPasswordDialog
+        open={!!credentials}
+        onClose={() => setCredentials(null)}
+        email={credentials?.email ?? ""}
+        password={credentials?.password ?? ""}
+      />
+
 
       {/* Filters */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

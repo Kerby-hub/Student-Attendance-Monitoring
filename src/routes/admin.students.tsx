@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Archive, ArchiveRestore, Search, Eye } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Plus, Pencil, Archive, ArchiveRestore, Search, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { adminCreateUser } from "@/lib/admin/users.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,8 +70,11 @@ function StudentsPage() {
     student_no: "", first_name: "", last_name: "", middle_name: "",
     email: "", contact_number: "", program: "", year_level: "1",
     section_id: "" as string,
+    temp_password: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const createUserFn = useServerFn(adminCreateUser);
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],
@@ -124,33 +130,76 @@ function StudentsPage() {
       const last = form.last_name.trim();
       const mid = form.middle_name.trim();
       const full = [first, mid, last].filter(Boolean).join(" ");
-      const payload = {
-        student_no: form.student_no.trim(),
-        first_name: first || null,
-        last_name: last || null,
-        middle_name: mid || null,
-        full_name: full || form.student_no,
-        email: form.email.trim() || null,
-        contact_number: form.contact_number.trim() || null,
-        program: form.program || null,
-        year_level: form.year_level ? parseInt(form.year_level, 10) : null,
-        section_id: form.section_id || null,
-      };
+      const email = form.email.trim();
+
       if (editing) {
+        const payload = {
+          student_no: form.student_no.trim(),
+          first_name: first || null,
+          last_name: last || null,
+          middle_name: mid || null,
+          full_name: full || form.student_no,
+          email: email || null,
+          contact_number: form.contact_number.trim() || null,
+          program: form.program || null,
+          year_level: form.year_level ? parseInt(form.year_level, 10) : null,
+          section_id: form.section_id || null,
+        };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from("students").insert({ ...payload, status: "active" });
-        if (error) throw error;
+        return null;
       }
+
+      if (!email) throw new Error("Email is required to create a login account.");
+      const password = form.temp_password.trim() || generateTempPassword();
+      if (password.length < 8) throw new Error("Temporary password must be at least 8 characters.");
+
+      const res = await createUserFn({
+        data: {
+          email,
+          password,
+          fullName: full || form.student_no,
+          role: "student",
+          status: "active",
+          studentData: {
+            student_no: form.student_no.trim(),
+            program: form.program || undefined,
+            year_level: form.year_level ? parseInt(form.year_level, 10) : undefined,
+            section_id: form.section_id || null,
+            contact_number: form.contact_number.trim() || undefined,
+          },
+        },
+      });
+
+      // Save first/middle/last on the student row (adminCreateUser only sets full_name)
+      if (res?.userId) {
+        await supabase.from("students").update({
+          first_name: first || null,
+          last_name: last || null,
+          middle_name: mid || null,
+        }).eq("user_id", res.userId);
+      }
+      return { email, password };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
       qc.invalidateQueries({ queryKey: ["students"] });
       qc.invalidateQueries({ queryKey: ["admin-counts"] });
       setOpen(false); setEditing(null); setForm(emptyForm);
+      if (result) setCredentials(result);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e.message || "Failed to create account";
+      if (/already registered|already exists|duplicate/i.test(msg)) {
+        toast.error("Email already exists");
+      } else if (/invalid.*email/i.test(msg)) {
+        toast.error("Invalid email");
+      } else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) {
+        toast.error("Password too weak");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const setStatus = useMutation({
@@ -168,7 +217,7 @@ function StudentsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...emptyForm, student_no: genStudentNo() });
+    setForm({ ...emptyForm, student_no: genStudentNo(), temp_password: generateTempPassword() });
     setOpen(true);
   };
   const openEdit = (s: Student) => {
@@ -183,6 +232,7 @@ function StudentsPage() {
       program: s.program ?? "",
       year_level: s.year_level ? String(s.year_level) : "",
       section_id: s.section_id ?? "",
+      temp_password: "",
     });
     setOpen(true);
   };
@@ -256,20 +306,47 @@ function StudentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {!editing && (
+                  <div className="sm:col-span-2">
+                    <Label>Temporary password</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.temp_password}
+                        onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
+                        placeholder="Auto-generated"
+                        className="font-mono"
+                      />
+                      <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
+                        <RefreshCw className="mr-1.5 h-4 w-4" />Generate
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Student will be required to change this on first login.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => upsert.mutate()}
-                  disabled={!form.student_no || !form.first_name || !form.last_name || upsert.isPending}
+                  disabled={!form.student_no || !form.first_name || !form.last_name || (!editing && !form.email) || upsert.isPending}
                 >
-                  {editing ? "Save changes" : "Create student"}
+                  {upsert.isPending ? "Saving…" : editing ? "Save changes" : "Create student"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         }
       />
+
+      <TempPasswordDialog
+        open={!!credentials}
+        onClose={() => setCredentials(null)}
+        email={credentials?.email ?? ""}
+        password={credentials?.password ?? ""}
+      />
+
 
       {/* Filters */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

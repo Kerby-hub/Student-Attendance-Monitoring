@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, UserX, UserCheck, Settings2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Plus, Pencil, UserX, UserCheck, Settings2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { adminCreateUser } from "@/lib/admin/users.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +41,10 @@ function TeachersPage() {
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
+    temp_password: "",
   });
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const createUserFn = useServerFn(adminCreateUser);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["teachers"],
@@ -63,28 +69,54 @@ function TeachersPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
-      const payload = {
-        teacher_no: form.teacher_no,
-        full_name: form.full_name,
-        email: form.email,
-        position: form.position || null,
-        department_id: form.department_id || null,
-      };
       if (editing) {
+        const payload = {
+          teacher_no: form.teacher_no,
+          full_name: form.full_name,
+          email: form.email,
+          position: form.position || null,
+          department_id: form.department_id || null,
+        };
         const { error } = await supabase.from("teachers").update(payload).eq("id", editing.id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from("teachers").insert(payload);
-        if (error) throw error;
+        return null;
       }
+
+      const email = form.email.trim();
+      if (!email) throw new Error("Email is required to create a login account.");
+      const password = form.temp_password.trim() || generateTempPassword();
+      if (password.length < 8) throw new Error("Temporary password must be at least 8 characters.");
+
+      await createUserFn({
+        data: {
+          email,
+          password,
+          fullName: form.full_name,
+          role: "teacher",
+          status: "active",
+          teacherData: {
+            teacher_no: form.teacher_no,
+            position: form.position || undefined,
+            department_id: form.department_id || null,
+          },
+        },
+      });
+      return { email, password };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success(editing ? "Teacher updated" : "Teacher created");
       qc.invalidateQueries({ queryKey: ["teachers"] });
       setOpen(false); setEditing(null);
-      setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "" });
+      setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: "" });
+      if (result) setCredentials(result);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e.message || "Failed to create account";
+      if (/already registered|already exists|duplicate/i.test(msg)) toast.error("Email already exists");
+      else if (/invalid.*email/i.test(msg)) toast.error("Invalid email");
+      else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) toast.error("Password too weak");
+      else toast.error(msg);
+    },
   });
 
   const toggleStatus = useMutation({
@@ -99,7 +131,7 @@ function TeachersPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "" });
+    setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: generateTempPassword() });
     setOpen(true);
   };
   const openEdit = (t: Teacher) => {
@@ -107,6 +139,7 @@ function TeachersPage() {
     setForm({
       teacher_no: t.teacher_no, full_name: t.full_name, email: t.email,
       position: t.position ?? "", department_id: t.department_id ?? "",
+      temp_password: "",
     });
     setOpen(true);
   };
@@ -136,17 +169,44 @@ function TeachersPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                {!editing && (
+                  <div className="sm:col-span-2">
+                    <Label>Temporary password</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.temp_password}
+                        onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
+                        placeholder="Auto-generated"
+                        className="font-mono"
+                      />
+                      <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
+                        <RefreshCw className="mr-1.5 h-4 w-4" />Generate
+                      </Button>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Teacher will be required to change this on first login.
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button onClick={() => upsert.mutate()} disabled={!form.teacher_no || !form.full_name || !form.email || upsert.isPending}>
-                  {editing ? "Save" : "Create"}
+                  {upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         }
       />
+
+      <TempPasswordDialog
+        open={!!credentials}
+        onClose={() => setCredentials(null)}
+        email={credentials?.email ?? ""}
+        password={credentials?.password ?? ""}
+      />
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>

@@ -130,33 +130,76 @@ function StudentsPage() {
       const last = form.last_name.trim();
       const mid = form.middle_name.trim();
       const full = [first, mid, last].filter(Boolean).join(" ");
-      const payload = {
-        student_no: form.student_no.trim(),
-        first_name: first || null,
-        last_name: last || null,
-        middle_name: mid || null,
-        full_name: full || form.student_no,
-        email: form.email.trim() || null,
-        contact_number: form.contact_number.trim() || null,
-        program: form.program || null,
-        year_level: form.year_level ? parseInt(form.year_level, 10) : null,
-        section_id: form.section_id || null,
-      };
+      const email = form.email.trim();
+
       if (editing) {
+        const payload = {
+          student_no: form.student_no.trim(),
+          first_name: first || null,
+          last_name: last || null,
+          middle_name: mid || null,
+          full_name: full || form.student_no,
+          email: email || null,
+          contact_number: form.contact_number.trim() || null,
+          program: form.program || null,
+          year_level: form.year_level ? parseInt(form.year_level, 10) : null,
+          section_id: form.section_id || null,
+        };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
         if (error) throw error;
-      } else {
-        const { error } = await supabase.from("students").insert({ ...payload, status: "active" });
-        if (error) throw error;
+        return null;
       }
+
+      if (!email) throw new Error("Email is required to create a login account.");
+      const password = form.temp_password.trim() || generateTempPassword();
+      if (password.length < 8) throw new Error("Temporary password must be at least 8 characters.");
+
+      const res = await createUserFn({
+        data: {
+          email,
+          password,
+          fullName: full || form.student_no,
+          role: "student",
+          status: "active",
+          studentData: {
+            student_no: form.student_no.trim(),
+            program: form.program || undefined,
+            year_level: form.year_level ? parseInt(form.year_level, 10) : undefined,
+            section_id: form.section_id || null,
+            contact_number: form.contact_number.trim() || undefined,
+          },
+        },
+      });
+
+      // Save first/middle/last on the student row (adminCreateUser only sets full_name)
+      if (res?.userId) {
+        await supabase.from("students").update({
+          first_name: first || null,
+          last_name: last || null,
+          middle_name: mid || null,
+        }).eq("user_id", res.userId);
+      }
+      return { email, password };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
       qc.invalidateQueries({ queryKey: ["students"] });
       qc.invalidateQueries({ queryKey: ["admin-counts"] });
       setOpen(false); setEditing(null); setForm(emptyForm);
+      if (result) setCredentials(result);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      const msg = e.message || "Failed to create account";
+      if (/already registered|already exists|duplicate/i.test(msg)) {
+        toast.error("Email already exists");
+      } else if (/invalid.*email/i.test(msg)) {
+        toast.error("Invalid email");
+      } else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) {
+        toast.error("Password too weak");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
   const setStatus = useMutation({

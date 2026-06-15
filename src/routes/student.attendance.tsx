@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Component, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Camera,
@@ -46,10 +46,12 @@ const ERROR_TITLES: Record<string, string> = {
   unknown: "Something went wrong",
 };
 
-// Top-level error boundary so a render crash never produces the
-// "This page didn't load" white screen — the manual fallback stays visible.
+const QR_CONTAINER_ID = "qr-reader";
+
+// Defensive boundary in case anything else inside the scanner area throws.
+// Cleanup errors are swallowed below, so this should rarely trip.
 class ScannerErrorBoundary extends Component<
-  { children: ReactNode; onError?: (err: unknown) => void },
+  { children: ReactNode },
   { error: Error | null }
 > {
   state = { error: null as Error | null };
@@ -57,8 +59,6 @@ class ScannerErrorBoundary extends Component<
     return { error };
   }
   componentDidCatch(error: unknown) {
-    // Swallow — page still renders the fallback below.
-    this.props.onError?.(error);
     // eslint-disable-next-line no-console
     console.warn("[StudentAttendance] boundary caught:", error);
   }
@@ -97,12 +97,6 @@ function StudentAttendancePage() {
 
 function StudentScanner() {
   const qc = useQueryClient();
-  const reactContainerId = useId().replace(/:/g, "_");
-  // html5-qrcode mounts video/canvas inside this inner div. We keep an outer
-  // wrapper that React always owns, so React's reconciler never tries to
-  // diff nodes html5-qrcode created/removed (which is what produces the
-  // "Failed to execute 'removeChild' on 'Node'" crash).
-  const innerId = `qr-reader-inner-${reactContainerId}`;
 
   const [mounted, setMounted] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -114,11 +108,13 @@ function StudentScanner() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
-  const startingRef = useRef(false);
-  const cleanedUpRef = useRef(false);
+  const isMountedRef = useRef(false);
+  const isScannerRunningRef = useRef(false);
+  const isStartingRef = useRef(false);
   const handlingRef = useRef(false);
 
   useEffect(() => {
+    isMountedRef.current = true;
     setMounted(true);
     if (typeof window !== "undefined") {
       const secure =
@@ -128,18 +124,15 @@ function StudentScanner() {
       setIsSecure(secure);
     }
     return () => {
-      cleanedUpRef.current = true;
-      // Fire-and-forget. Errors are swallowed inside.
-      void safeTeardown(scannerRef, innerId);
-      scannerRef.current = null;
+      isMountedRef.current = false;
+      // Fire-and-forget. All errors swallowed inside.
+      void teardownScanner(scannerRef, isScannerRunningRef);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopScanner = async () => {
-    await safeTeardown(scannerRef, innerId);
-    scannerRef.current = null;
-    setScanning(false);
+    await teardownScanner(scannerRef, isScannerRunningRef);
+    if (isMountedRef.current) setScanning(false);
   };
 
   const getLocation = (): Promise<GeolocationPosition> =>
@@ -244,13 +237,14 @@ function StudentScanner() {
   };
 
   const startScanner = async () => {
-    if (startingRef.current || scannerRef.current) return;
-    startingRef.current = true;
+    // Block double-init from React Strict Mode / rapid clicks.
+    if (isStartingRef.current || isScannerRunningRef.current || scannerRef.current) return;
+    isStartingRef.current = true;
     setResult(null);
     setCameraError(null);
 
     if (typeof window === "undefined") {
-      startingRef.current = false;
+      isStartingRef.current = false;
       return;
     }
 
@@ -262,15 +256,19 @@ function StudentScanner() {
       setCameraError(
         "Camera access requires HTTPS. Open the app over ngrok / Vercel / Netlify, or use the manual code below.",
       );
-      startingRef.current = false;
+      isStartingRef.current = false;
       return;
     }
 
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
       setCameraError(
         "Your browser does not support camera access. Try a recent Chrome, Safari, or Firefox.",
       );
-      startingRef.current = false;
+      isStartingRef.current = false;
       return;
     }
 
@@ -281,20 +279,19 @@ function StudentScanner() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load QR scanner.";
       setCameraError(`QR scanner library failed to load: ${msg}`);
-      startingRef.current = false;
+      isStartingRef.current = false;
       return;
     }
 
-    // Confirm the inner div exists before handing it to html5-qrcode.
-    if (typeof document === "undefined" || !document.getElementById(innerId)) {
+    if (typeof document === "undefined" || !document.getElementById(QR_CONTAINER_ID)) {
       setCameraError("Scanner container is not ready. Please reload the page.");
-      startingRef.current = false;
+      isStartingRef.current = false;
       return;
     }
 
-    setScanning(true);
+    if (isMountedRef.current) setScanning(true);
     try {
-      const scanner = new Html5Qrcode(innerId, /* verbose */ false);
+      const scanner = new Html5Qrcode(QR_CONTAINER_ID, /* verbose */ false);
       scannerRef.current = scanner;
       await scanner.start(
         { facingMode: "environment" },
@@ -303,18 +300,18 @@ function StudentScanner() {
           await submitToken(decoded);
         },
         () => {
-          /* ignore per-frame decode errors */
+          /* per-frame decode failures — ignore */
         },
       );
-    } catch (e) {
-      setScanning(false);
-      // Detach the failed instance without touching DOM we don't own.
-      try {
-        if (scannerRef.current?._isScanning) await scannerRef.current.stop();
-      } catch {
-        /* ignore */
+      isScannerRunningRef.current = true;
+      // If component unmounted while start() was in flight, tear down now.
+      if (!isMountedRef.current) {
+        void teardownScanner(scannerRef, isScannerRunningRef);
       }
+    } catch (e) {
+      isScannerRunningRef.current = false;
       scannerRef.current = null;
+      if (isMountedRef.current) setScanning(false);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = e as any;
       const name = err?.name || "";
@@ -328,9 +325,9 @@ function StudentScanner() {
       } else if (name === "SecurityError") {
         msg = "Camera blocked for security reasons. Open the app over HTTPS.";
       }
-      setCameraError(msg);
+      if (isMountedRef.current) setCameraError(msg);
     } finally {
-      startingRef.current = false;
+      isStartingRef.current = false;
     }
   };
 
@@ -420,20 +417,27 @@ function StudentScanner() {
         <>
           <Card>
             <CardContent className="space-y-4 p-4 sm:p-6">
-              {/* React owns the outer wrapper. html5-qrcode mounts/removes
-                  children inside the inner div, which React never touches. */}
-              <div className="mx-auto aspect-square w-full max-w-md overflow-hidden rounded-lg border-2 border-dashed border-muted bg-muted/30">
-                <div id={innerId} className="h-full w-full">
-                  {!scanning && (
-                    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
-                      <ScanLine className="h-10 w-10 text-primary" />
-                      <p>
-                        Press <strong>Open Scanner</strong> below to activate your camera.
-                      </p>
-                    </div>
-                  )}
+              {/* Stable container. React renders this div once and never updates
+                  its children. html5-qrcode owns everything inside it, so React's
+                  reconciler never tries to removeChild() on nodes it didn't
+                  create. The placeholder only renders when not scanning, and is
+                  rendered as a sibling above — never inside #qr-reader. */}
+              {!scanning && (
+                <div className="mx-auto flex aspect-square w-full max-w-md flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+                  <ScanLine className="h-10 w-10 text-primary" />
+                  <p>
+                    Press <strong>Open Scanner</strong> below to activate your camera.
+                  </p>
                 </div>
-              </div>
+              )}
+              <div
+                id={QR_CONTAINER_ID}
+                className={
+                  scanning
+                    ? "mx-auto aspect-square w-full max-w-md overflow-hidden rounded-lg border-2 border-dashed border-muted bg-black"
+                    : "hidden"
+                }
+              />
               {cameraError && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
@@ -494,29 +498,44 @@ function StudentScanner() {
   );
 }
 
-// Safely stop + clear html5-qrcode without throwing if the underlying
-// DOM nodes were already removed by React. This is what prevents the
-// "Failed to execute 'removeChild' on 'Node'" crash on unmount.
-async function safeTeardown(
+// Centralized, idempotent teardown. Safe to call multiple times. Never
+// throws — any cleanup error is logged and swallowed so React never sees
+// the "removeChild" exception bubble up through unmount.
+async function teardownScanner(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ref: React.MutableRefObject<any>,
-  containerId: string,
+  runningRef: React.MutableRefObject<boolean>,
 ) {
-  const s = ref.current;
-  if (!s) return;
-  try {
-    if (s._isScanning || (typeof s.getState === "function" && s.getState() === 2)) {
-      await s.stop();
-    }
-  } catch {
-    /* ignore */
+  const scanner = ref.current;
+  if (!scanner) {
+    runningRef.current = false;
+    return;
   }
-  try {
-    if (typeof document !== "undefined" && document.getElementById(containerId)) {
-      await s.clear();
+  ref.current = null;
+
+  // Only stop if actually running. Calling stop() on an idle scanner throws.
+  const running =
+    runningRef.current ||
+    (typeof scanner.getState === "function" && scanner.getState() === 2);
+  if (running) {
+    try {
+      await scanner.stop();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[StudentAttendance] scanner.stop() failed:", err);
     }
-  } catch {
-    /* ignore — html5-qrcode sometimes throws when React already unmounted */
+  }
+  runningRef.current = false;
+
+  // Only clear if the container still exists in the DOM — otherwise
+  // html5-qrcode will try to removeChild() on a node React already removed.
+  try {
+    if (typeof document !== "undefined" && document.getElementById(QR_CONTAINER_ID)) {
+      await scanner.clear();
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[StudentAttendance] scanner.clear() failed:", err);
   }
 }
 

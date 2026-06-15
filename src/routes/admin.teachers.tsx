@@ -41,7 +41,10 @@ function TeachersPage() {
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
+    temp_password: "",
   });
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
+  const createUserFn = useServerFn(adminCreateUser);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["teachers"],

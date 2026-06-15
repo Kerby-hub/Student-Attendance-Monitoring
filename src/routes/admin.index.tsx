@@ -54,6 +54,15 @@ function AdminDashboardPage() {
     refetchInterval: 30000,
   });
 
+  const { data: registeredDevices = 0 } = useQuery({
+    queryKey: ["admin-devices-active"],
+    queryFn: async () => {
+      const { count } = await supabase.from("device_registrations")
+        .select("*", { count: "exact", head: true }).eq("status", "active");
+      return count ?? 0;
+    },
+  });
+
   const { data: today = [] } = useQuery({
     queryKey: ["admin-today"],
     queryFn: async () => {
@@ -190,10 +199,25 @@ function AdminDashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Radio} label="Active Sessions" value={activeSessions} tone="text-primary" />
-        <StatCard icon={CheckCircle2} label="Present Today" value={todayStats.present} tone="text-green-600" />
-        <StatCard icon={Clock} label="Late Today" value={todayStats.late} tone="text-yellow-600" />
-        <StatCard icon={XCircle} label="Absent Today" value={todayStats.absent} tone="text-destructive" />
+        <StatCard icon={Radio} label="Active Sessions" value={activeSessions} tone="primary" />
+        <StatCard icon={CheckCircle2} label="Present Today" value={todayStats.present} tone="success" />
+        <StatCard icon={Clock} label="Late Today" value={todayStats.late} tone="warning" />
+        <StatCard icon={XCircle} label="Absent Today" value={todayStats.absent} tone="destructive" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Smartphone} label="Registered Devices" value={registeredDevices} tone="info" />
+        <StatCard
+          icon={Percent}
+          label="Attendance Rate (today)"
+          value={`${
+            todayStats.present + todayStats.late + todayStats.absent === 0
+              ? 0
+              : Math.round(((todayStats.present + todayStats.late) / (todayStats.present + todayStats.late + todayStats.absent)) * 100)
+          }%`}
+          tone="success"
+        />
+        <StatCard icon={Users} label="Teachers" value={counts?.teachers ?? 0} tone="neutral" />
+        <StatCard icon={GraduationCap} label="Students" value={counts?.students ?? 0} tone="neutral" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -296,17 +320,6 @@ function AdminDashboardPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: string }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <Icon className={`h-4 w-4 ${tone}`} />
-      </CardHeader>
-      <CardContent><div className={`text-3xl font-bold ${tone}`}>{value}</div></CardContent>
-    </Card>
-  );
-}
 
 function EmptyChart() {
   return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No data in the selected range.</div>;

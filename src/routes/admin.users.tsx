@@ -161,6 +161,13 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const resetDevice = useMutation({
+    mutationFn: async (u: UserRow) => { await resetDeviceFn({ data: { userId: u.id } }); },
+    onSuccess: () => toast.success("Device binding reset", { description: "User can register a new device on next login." }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   return (
     <div>
       <PageHeader

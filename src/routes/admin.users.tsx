@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, KeyRound, UserX, UserCheck, Trash2, Search } from "lucide-react";
+import { Plus, KeyRound, UserX, UserCheck, Trash2, Search, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   adminCreateUser, adminResetPassword, adminSetStatus, adminDeleteUser, adminSetRole,
 } from "@/lib/admin/users.functions";
+import { adminResetDevice } from "@/lib/device/device.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ function UsersPage() {
   const setStatusFn = useServerFn(adminSetStatus);
   const deleteUserFn = useServerFn(adminDeleteUser);
   const setRoleFn = useServerFn(adminSetRole);
+  const resetDeviceFn = useServerFn(adminResetDevice);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["admin-users"],

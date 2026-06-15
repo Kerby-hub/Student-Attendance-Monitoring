@@ -217,7 +217,7 @@ function StudentsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...emptyForm, student_no: genStudentNo() });
+    setForm({ ...emptyForm, student_no: genStudentNo(), temp_password: generateTempPassword() });
     setOpen(true);
   };
   const openEdit = (s: Student) => {
@@ -232,6 +232,7 @@ function StudentsPage() {
       program: s.program ?? "",
       year_level: s.year_level ? String(s.year_level) : "",
       section_id: s.section_id ?? "",
+      temp_password: "",
     });
     setOpen(true);
   };

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Camera,
@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const Route = createFileRoute("/student/attendance")({
-  component: StudentScannerPage,
+  component: StudentAttendancePage,
 });
 
 type ScanResult =
@@ -46,8 +46,64 @@ const ERROR_TITLES: Record<string, string> = {
   unknown: "Something went wrong",
 };
 
-function StudentScannerPage() {
+// Top-level error boundary so a render crash never produces the
+// "This page didn't load" white screen — the manual fallback stays visible.
+class ScannerErrorBoundary extends Component<
+  { children: ReactNode; onError?: (err: unknown) => void },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: unknown) {
+    // Swallow — page still renders the fallback below.
+    this.props.onError?.(error);
+    // eslint-disable-next-line no-console
+    console.warn("[StudentAttendance] boundary caught:", error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Scanner unavailable</AlertTitle>
+          <AlertDescription>
+            The camera scanner could not start on this device. Use the manual attendance code below
+            to check in.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function StudentAttendancePage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Scan QR to check in</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Point your camera at the QR code displayed by your teacher, or enter the code manually.
+        </p>
+      </div>
+      <ScannerErrorBoundary>
+        <StudentScanner />
+      </ScannerErrorBoundary>
+    </div>
+  );
+}
+
+function StudentScanner() {
   const qc = useQueryClient();
+  const reactContainerId = useId().replace(/:/g, "_");
+  // html5-qrcode mounts video/canvas inside this inner div. We keep an outer
+  // wrapper that React always owns, so React's reconciler never tries to
+  // diff nodes html5-qrcode created/removed (which is what produces the
+  // "Failed to execute 'removeChild' on 'Node'" crash).
+  const innerId = `qr-reader-inner-${reactContainerId}`;
+
   const [mounted, setMounted] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,12 +111,13 @@ function StudentScannerPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [isSecure, setIsSecure] = useState(true);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
-  const containerId = "qr-reader";
+  const startingRef = useRef(false);
+  const cleanedUpRef = useRef(false);
   const handlingRef = useRef(false);
 
-  // Mark as mounted so we only touch window/navigator on the client.
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
@@ -70,28 +127,20 @@ function StudentScannerPage() {
         window.location.hostname === "127.0.0.1";
       setIsSecure(secure);
     }
+    return () => {
+      cleanedUpRef.current = true;
+      // Fire-and-forget. Errors are swallowed inside.
+      void safeTeardown(scannerRef, innerId);
+      scannerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopScanner = async () => {
-    try {
-      if (scannerRef.current) {
-        const s = scannerRef.current;
-        if (s._isScanning) await s.stop();
-        await s.clear();
-      }
-    } catch {
-      // ignore
-    } finally {
-      scannerRef.current = null;
-      setScanning(false);
-    }
+    await safeTeardown(scannerRef, innerId);
+    scannerRef.current = null;
+    setScanning(false);
   };
-
-  useEffect(() => {
-    return () => {
-      void stopScanner();
-    };
-  }, []);
 
   const getLocation = (): Promise<GeolocationPosition> =>
     new Promise((resolve, reject) => {
@@ -124,7 +173,7 @@ function StudentScannerPage() {
         try {
           token = new URL(token).searchParams.get("t") ?? token;
         } catch {
-          // not a URL, leave as-is
+          /* not a URL */
         }
       }
     }
@@ -195,32 +244,36 @@ function StudentScannerPage() {
   };
 
   const startScanner = async () => {
+    if (startingRef.current || scannerRef.current) return;
+    startingRef.current = true;
     setResult(null);
     setCameraError(null);
 
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      startingRef.current = false;
+      return;
+    }
 
-    // 1) Secure context check
     const secure =
       window.isSecureContext ||
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
     if (!secure) {
       setCameraError(
-        "Camera access requires HTTPS. Please open the app using ngrok, Vercel, or Netlify.",
+        "Camera access requires HTTPS. Open the app over ngrok / Vercel / Netlify, or use the manual code below.",
       );
+      startingRef.current = false;
       return;
     }
 
-    // 2) mediaDevices / getUserMedia support
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
       setCameraError(
-        "Your browser does not support camera access (getUserMedia). Use a recent Chrome, Safari, or Firefox.",
+        "Your browser does not support camera access. Try a recent Chrome, Safari, or Firefox.",
       );
+      startingRef.current = false;
       return;
     }
 
-    // 3) Dynamically import the scanner only on the client
     let Html5Qrcode: typeof import("html5-qrcode").Html5Qrcode;
     try {
       const mod = await import("html5-qrcode");
@@ -228,12 +281,20 @@ function StudentScannerPage() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load QR scanner.";
       setCameraError(`QR scanner library failed to load: ${msg}`);
+      startingRef.current = false;
+      return;
+    }
+
+    // Confirm the inner div exists before handing it to html5-qrcode.
+    if (typeof document === "undefined" || !document.getElementById(innerId)) {
+      setCameraError("Scanner container is not ready. Please reload the page.");
+      startingRef.current = false;
       return;
     }
 
     setScanning(true);
     try {
-      const scanner = new Html5Qrcode(containerId);
+      const scanner = new Html5Qrcode(innerId, /* verbose */ false);
       scannerRef.current = scanner;
       await scanner.start(
         { facingMode: "environment" },
@@ -247,6 +308,12 @@ function StudentScannerPage() {
       );
     } catch (e) {
       setScanning(false);
+      // Detach the failed instance without touching DOM we don't own.
+      try {
+        if (scannerRef.current?._isScanning) await scannerRef.current.stop();
+      } catch {
+        /* ignore */
+      }
       scannerRef.current = null;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err = e as any;
@@ -262,6 +329,8 @@ function StudentScannerPage() {
         msg = "Camera blocked for security reasons. Open the app over HTTPS.";
       }
       setCameraError(msg);
+    } finally {
+      startingRef.current = false;
     }
   };
 
@@ -281,20 +350,12 @@ function StudentScannerPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Scan QR to check in</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Point your camera at the QR code displayed by your teacher, or enter the code manually.
-        </p>
-      </div>
-
       {mounted && !isSecure && (
         <Alert variant="destructive">
           <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>HTTPS required</AlertTitle>
+          <AlertTitle>HTTPS required for camera</AlertTitle>
           <AlertDescription>
-            Camera access requires HTTPS. Please open the app using ngrok, Vercel, or Netlify. You
-            can still use the manual code below.
+            Camera access requires HTTPS. You can still use the manual attendance code below.
           </AlertDescription>
         </Alert>
       )}
@@ -359,18 +420,19 @@ function StudentScannerPage() {
         <>
           <Card>
             <CardContent className="space-y-4 p-4 sm:p-6">
-              <div
-                id={containerId}
-                className="mx-auto aspect-square w-full max-w-md overflow-hidden rounded-lg border-2 border-dashed border-muted bg-muted/30"
-              >
-                {!scanning && (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
-                    <ScanLine className="h-10 w-10 text-primary" />
-                    <p>
-                      Press <strong>Open Scanner</strong> below to activate your camera.
-                    </p>
-                  </div>
-                )}
+              {/* React owns the outer wrapper. html5-qrcode mounts/removes
+                  children inside the inner div, which React never touches. */}
+              <div className="mx-auto aspect-square w-full max-w-md overflow-hidden rounded-lg border-2 border-dashed border-muted bg-muted/30">
+                <div id={innerId} className="h-full w-full">
+                  {!scanning && (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
+                      <ScanLine className="h-10 w-10 text-primary" />
+                      <p>
+                        Press <strong>Open Scanner</strong> below to activate your camera.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
               {cameraError && (
                 <Alert variant="destructive">
@@ -430,6 +492,32 @@ function StudentScannerPage() {
       )}
     </div>
   );
+}
+
+// Safely stop + clear html5-qrcode without throwing if the underlying
+// DOM nodes were already removed by React. This is what prevents the
+// "Failed to execute 'removeChild' on 'Node'" crash on unmount.
+async function safeTeardown(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ref: React.MutableRefObject<any>,
+  containerId: string,
+) {
+  const s = ref.current;
+  if (!s) return;
+  try {
+    if (s._isScanning || (typeof s.getState === "function" && s.getState() === 2)) {
+      await s.stop();
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (typeof document !== "undefined" && document.getElementById(containerId)) {
+      await s.clear();
+    }
+  } catch {
+    /* ignore — html5-qrcode sometimes throws when React already unmounted */
+  }
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {

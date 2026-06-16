@@ -40,9 +40,12 @@ import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
 import { Route as AdminSchedulesRouteImport } from './routes/admin.schedules'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminLocationRouteImport } from './routes/admin.location'
 import { Route as AdminGeofencingRouteImport } from './routes/admin.geofencing'
+import { Route as AdminExportsRouteImport } from './routes/admin.exports'
 import { Route as AdminDevicesRouteImport } from './routes/admin.devices'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
+import { Route as AdminBroadcastRouteImport } from './routes/admin.broadcast'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin.audit-logs'
 import { Route as TeacherAttendanceSessionScheduleIdRouteImport } from './routes/teacher.attendance-session.$scheduleId'
 import { Route as AdminStudentsIdRouteImport } from './routes/admin.students.$id'
@@ -202,9 +205,19 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLocationRoute = AdminLocationRouteImport.update({
+  id: '/location',
+  path: '/location',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminGeofencingRoute = AdminGeofencingRouteImport.update({
   id: '/geofencing',
   path: '/geofencing',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminExportsRoute = AdminExportsRouteImport.update({
+  id: '/exports',
+  path: '/exports',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDevicesRoute = AdminDevicesRouteImport.update({
@@ -215,6 +228,11 @@ const AdminDevicesRoute = AdminDevicesRouteImport.update({
 const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBroadcastRoute = AdminBroadcastRouteImport.update({
+  id: '/broadcast',
+  path: '/broadcast',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAuditLogsRoute = AdminAuditLogsRouteImport.update({
@@ -246,9 +264,12 @@ export interface FileRoutesByFullPath {
   '/student': typeof StudentRouteWithChildren
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
+  '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
@@ -282,9 +303,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
+  '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
@@ -322,9 +346,12 @@ export interface FileRoutesById {
   '/student': typeof StudentRouteWithChildren
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
+  '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
+  '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
@@ -363,9 +390,12 @@ export interface FileRouteTypes {
     | '/student'
     | '/teacher'
     | '/admin/audit-logs'
+    | '/admin/broadcast'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/exports'
     | '/admin/geofencing'
+    | '/admin/location'
     | '/admin/notifications'
     | '/admin/reports'
     | '/admin/schedules'
@@ -399,9 +429,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/admin/audit-logs'
+    | '/admin/broadcast'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/exports'
     | '/admin/geofencing'
+    | '/admin/location'
     | '/admin/notifications'
     | '/admin/reports'
     | '/admin/schedules'
@@ -438,9 +471,12 @@ export interface FileRouteTypes {
     | '/student'
     | '/teacher'
     | '/admin/audit-logs'
+    | '/admin/broadcast'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/exports'
     | '/admin/geofencing'
+    | '/admin/location'
     | '/admin/notifications'
     | '/admin/reports'
     | '/admin/schedules'
@@ -698,11 +734,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/location': {
+      id: '/admin/location'
+      path: '/location'
+      fullPath: '/admin/location'
+      preLoaderRoute: typeof AdminLocationRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/geofencing': {
       id: '/admin/geofencing'
       path: '/geofencing'
       fullPath: '/admin/geofencing'
       preLoaderRoute: typeof AdminGeofencingRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/exports': {
+      id: '/admin/exports'
+      path: '/exports'
+      fullPath: '/admin/exports'
+      preLoaderRoute: typeof AdminExportsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/devices': {
@@ -717,6 +767,13 @@ declare module '@tanstack/react-router' {
       path: '/departments'
       fullPath: '/admin/departments'
       preLoaderRoute: typeof AdminDepartmentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/broadcast': {
+      id: '/admin/broadcast'
+      path: '/broadcast'
+      fullPath: '/admin/broadcast'
+      preLoaderRoute: typeof AdminBroadcastRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/audit-logs': {
@@ -757,9 +814,12 @@ const AdminStudentsRouteWithChildren = AdminStudentsRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAuditLogsRoute: typeof AdminAuditLogsRoute
+  AdminBroadcastRoute: typeof AdminBroadcastRoute
   AdminDepartmentsRoute: typeof AdminDepartmentsRoute
   AdminDevicesRoute: typeof AdminDevicesRoute
+  AdminExportsRoute: typeof AdminExportsRoute
   AdminGeofencingRoute: typeof AdminGeofencingRoute
+  AdminLocationRoute: typeof AdminLocationRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSchedulesRoute: typeof AdminSchedulesRoute
@@ -774,9 +834,12 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditLogsRoute: AdminAuditLogsRoute,
+  AdminBroadcastRoute: AdminBroadcastRoute,
   AdminDepartmentsRoute: AdminDepartmentsRoute,
   AdminDevicesRoute: AdminDevicesRoute,
+  AdminExportsRoute: AdminExportsRoute,
   AdminGeofencingRoute: AdminGeofencingRoute,
+  AdminLocationRoute: AdminLocationRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSchedulesRoute: AdminSchedulesRoute,

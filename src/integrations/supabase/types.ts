@@ -161,6 +161,42 @@ export type Database = {
         }
         Relationships: []
       }
+      broadcasts: {
+        Row: {
+          audience_filter: Json
+          audience_type: string
+          created_at: string
+          failed_count: number
+          id: string
+          message: string
+          recipient_count: number
+          sender_id: string | null
+          sent_count: number
+        }
+        Insert: {
+          audience_filter?: Json
+          audience_type: string
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message: string
+          recipient_count?: number
+          sender_id?: string | null
+          sent_count?: number
+        }
+        Update: {
+          audience_filter?: Json
+          audience_type?: string
+          created_at?: string
+          failed_count?: number
+          id?: string
+          message?: string
+          recipient_count?: number
+          sender_id?: string | null
+          sent_count?: number
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           audience: Database["public"]["Enums"]["calendar_audience"]
@@ -493,6 +529,7 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          broadcast_id: string | null
           created_at: string
           id: string
           message: string
@@ -502,6 +539,7 @@ export type Database = {
           status: Database["public"]["Enums"]["sms_status"]
         }
         Insert: {
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           message: string
@@ -511,6 +549,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["sms_status"]
         }
         Update: {
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           message?: string
@@ -519,7 +558,15 @@ export type Database = {
           recipient_user_id?: string | null
           status?: Database["public"]["Enums"]["sms_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sms_logs_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {

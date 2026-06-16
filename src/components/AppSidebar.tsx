@@ -60,16 +60,16 @@ const groups: NavGroup[] = [
     label: "Geofencing",
     items: [
       { title: "Geofence Zones", url: "/admin/geofencing", icon: MapPin },
-      { title: "Location Monitoring", url: "/admin/geofencing", icon: Map },
+      { title: "Location Monitoring", url: "/admin/location", icon: Map },
       { title: "Zone Configuration", url: "/admin/geofencing", icon: Settings2 },
     ],
   },
   {
     label: "Notifications",
     items: [
-      { title: "SMS Notifications", url: "/admin/notifications", icon: MessageSquare },
-      { title: "Broadcast Messages", url: "/admin/notifications", icon: Bell },
       { title: "Notification Logs", url: "/admin/notifications", icon: ScrollText },
+      { title: "Broadcast Messages", url: "/admin/broadcast", icon: Bell },
+      { title: "SMS Settings", url: "/admin/settings", icon: MessageSquare },
     ],
   },
   {
@@ -78,7 +78,7 @@ const groups: NavGroup[] = [
       { title: "Daily Reports", url: "/admin/reports", icon: FileBarChart },
       { title: "Weekly Reports", url: "/admin/reports", icon: FileSpreadsheet },
       { title: "Monthly Reports", url: "/admin/reports", icon: FileText },
-      { title: "Export Center", url: "/admin/reports", icon: Download },
+      { title: "Export Center", url: "/admin/exports", icon: Download },
     ],
   },
   {

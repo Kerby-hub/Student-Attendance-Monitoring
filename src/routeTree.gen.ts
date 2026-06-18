@@ -45,6 +45,7 @@ import { Route as AdminGeofencingRouteImport } from './routes/admin.geofencing'
 import { Route as AdminExportsRouteImport } from './routes/admin.exports'
 import { Route as AdminDevicesRouteImport } from './routes/admin.devices'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
+import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminBroadcastRouteImport } from './routes/admin.broadcast'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin.audit-logs'
 import { Route as TeacherAttendanceSessionScheduleIdRouteImport } from './routes/teacher.attendance-session.$scheduleId'
@@ -230,6 +231,11 @@ const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
   path: '/departments',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCalendarRoute = AdminCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBroadcastRoute = AdminBroadcastRouteImport.update({
   id: '/broadcast',
   path: '/broadcast',
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
+  '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/exports': typeof AdminExportsRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
+  '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/exports': typeof AdminExportsRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/teacher': typeof TeacherRouteWithChildren
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
+  '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
   '/admin/exports': typeof AdminExportsRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/admin/audit-logs'
     | '/admin/broadcast'
+    | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
     | '/admin/exports'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/admin/audit-logs'
     | '/admin/broadcast'
+    | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
     | '/admin/exports'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/admin/audit-logs'
     | '/admin/broadcast'
+    | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
     | '/admin/exports'
@@ -769,6 +781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDepartmentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/calendar': {
+      id: '/admin/calendar'
+      path: '/calendar'
+      fullPath: '/admin/calendar'
+      preLoaderRoute: typeof AdminCalendarRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/broadcast': {
       id: '/admin/broadcast'
       path: '/broadcast'
@@ -815,6 +834,7 @@ const AdminStudentsRouteWithChildren = AdminStudentsRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminAuditLogsRoute: typeof AdminAuditLogsRoute
   AdminBroadcastRoute: typeof AdminBroadcastRoute
+  AdminCalendarRoute: typeof AdminCalendarRoute
   AdminDepartmentsRoute: typeof AdminDepartmentsRoute
   AdminDevicesRoute: typeof AdminDevicesRoute
   AdminExportsRoute: typeof AdminExportsRoute
@@ -835,6 +855,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditLogsRoute: AdminAuditLogsRoute,
   AdminBroadcastRoute: AdminBroadcastRoute,
+  AdminCalendarRoute: AdminCalendarRoute,
   AdminDepartmentsRoute: AdminDepartmentsRoute,
   AdminDevicesRoute: AdminDevicesRoute,
   AdminExportsRoute: AdminExportsRoute,
@@ -912,13 +933,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -204,7 +204,9 @@ export type Database = {
           created_by: string | null
           description: string | null
           ends_at: string
+          event_type: string | null
           id: string
+          location: string | null
           starts_at: string
           title: string
           updated_at: string
@@ -215,7 +217,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           ends_at: string
+          event_type?: string | null
           id?: string
+          location?: string | null
           starts_at: string
           title: string
           updated_at?: string
@@ -226,7 +230,9 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           ends_at?: string
+          event_type?: string | null
           id?: string
+          location?: string | null
           starts_at?: string
           title?: string
           updated_at?: string

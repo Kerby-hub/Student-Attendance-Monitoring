@@ -18,6 +18,8 @@ interface AuthContextValue {
   profile: Profile | null;
   roles: AppRole[];
   loading: boolean;
+  authLoading: boolean;
+  roleLoading: boolean;
   hasRole: (role: AppRole) => boolean;
   hasAnyRole: (roles: AppRole[]) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -32,19 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   const loadUserData = async (userId: string) => {
-    const [{ data: profileData }, { data: rolesData }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, email, full_name, must_change_password, status")
-        .eq("id", userId)
-        .maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-    ]);
-    setProfile(profileData as Profile | null);
-    setRoles(((rolesData ?? []) as { role: AppRole }[]).map((r) => r.role));
+    setRoleLoading(true);
+    try {
+      const [{ data: profileData }, { data: rolesData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, email, full_name, must_change_password, status")
+          .eq("id", userId)
+          .maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+      ]);
+      setProfile(profileData as Profile | null);
+      setRoles(((rolesData ?? []) as { role: AppRole }[]).map((r) => r.role));
+    } finally {
+      setRoleLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -52,10 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
+        setRoleLoading(true);
         setTimeout(() => loadUserData(newSession.user.id), 0);
       } else {
         setProfile(null);
         setRoles([]);
+        setRoleLoading(false);
       }
     });
 
@@ -63,9 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(existing);
       setUser(existing?.user ?? null);
       if (existing?.user) {
-        loadUserData(existing.user.id).finally(() => setLoading(false));
+        loadUserData(existing.user.id).finally(() => setAuthLoading(false));
       } else {
-        setLoading(false);
+        setRoleLoading(false);
+        setAuthLoading(false);
       }
     });
 
@@ -105,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, roles, loading, hasRole, hasAnyRole, signIn, signOut, refreshProfile }}
+      value={{ user, session, profile, roles, loading: authLoading || roleLoading, authLoading, roleLoading, hasRole, hasAnyRole, signIn, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

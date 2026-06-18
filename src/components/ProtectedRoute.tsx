@@ -10,16 +10,15 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, profile, roles, loading, hasAnyRole } = useAuth();
+  const { user, profile, roles, authLoading, roleLoading, hasAnyRole } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const search = useRouterState({ select: (r) => r.location.search });
   useDeviceGuard(!!user && !!profile && !profile.must_change_password);
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading) return;
     if (!user) {
-      // Preserve intended location so user returns here after login
       const redirect = pathname + (typeof window !== "undefined" ? window.location.search : "");
       navigate({
         to: "/login",
@@ -28,20 +27,22 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       });
       return;
     }
+    // Wait for role/profile fetch to complete before any role-based decision
+    if (roleLoading) return;
     if (profile?.must_change_password && pathname !== "/change-password") {
       navigate({ to: "/change-password", replace: true });
       return;
     }
-    // If signed in but has no roles assigned at all → access denied
     if (!profile?.must_change_password && roles.length === 0) {
       if (pathname !== "/access-denied") {
         navigate({ to: "/access-denied", replace: true });
       }
     }
-  }, [loading, user, profile, roles, pathname, search, navigate]);
+  }, [authLoading, roleLoading, user, profile, roles, pathname, search, navigate]);
 
-  if (loading) return <FullPageLoader />;
+  if (authLoading) return <FullPageLoader />;
   if (!user) return <FullPageLoader />;
+  if (roleLoading) return <FullPageLoader />;
   if (profile?.must_change_password && pathname !== "/change-password") return <FullPageLoader />;
   if (!profile?.must_change_password && roles.length === 0) return <FullPageLoader />;
 

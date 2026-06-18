@@ -416,32 +416,46 @@ export type Database = {
       notifications: {
         Row: {
           body: string | null
+          broadcast_id: string | null
           created_at: string
           id: string
           read: boolean
+          sender_id: string | null
           title: string
           type: string | null
           user_id: string
         }
         Insert: {
           body?: string | null
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           read?: boolean
+          sender_id?: string | null
           title: string
           type?: string | null
           user_id: string
         }
         Update: {
           body?: string | null
+          broadcast_id?: string | null
           created_at?: string
           id?: string
           read?: boolean
+          sender_id?: string | null
           title?: string
           type?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

@@ -4,33 +4,46 @@ import { useAuth, type AppRole } from "@/contexts/AuthContext";
 import { FullPageLoader } from "./LoadingSpinner";
 import { useDeviceGuard } from "@/hooks/useDeviceGuard";
 
-
 interface ProtectedRouteProps {
   children: ReactNode;
   allowedRoles?: AppRole[];
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, profile, loading, hasAnyRole } = useAuth();
+  const { user, profile, roles, loading, hasAnyRole } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const search = useRouterState({ select: (r) => r.location.search });
   useDeviceGuard(!!user && !!profile && !profile.must_change_password);
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      navigate({ to: "/login", replace: true });
+      // Preserve intended location so user returns here after login
+      const redirect = pathname + (typeof window !== "undefined" ? window.location.search : "");
+      navigate({
+        to: "/login",
+        replace: true,
+        search: { redirect } as never,
+      });
       return;
     }
-    // Force temp-password change on first login
     if (profile?.must_change_password && pathname !== "/change-password") {
       navigate({ to: "/change-password", replace: true });
+      return;
     }
-  }, [loading, user, profile, pathname, navigate]);
+    // If signed in but has no roles assigned at all → access denied
+    if (!profile?.must_change_password && roles.length === 0) {
+      if (pathname !== "/access-denied") {
+        navigate({ to: "/access-denied", replace: true });
+      }
+    }
+  }, [loading, user, profile, roles, pathname, search, navigate]);
 
   if (loading) return <FullPageLoader />;
-  if (!user) return null;
+  if (!user) return <FullPageLoader />;
   if (profile?.must_change_password && pathname !== "/change-password") return <FullPageLoader />;
+  if (!profile?.must_change_password && roles.length === 0) return <FullPageLoader />;
 
   if (allowedRoles && allowedRoles.length > 0 && !hasAnyRole(allowedRoles)) {
     return <AccessDeniedInline />;
@@ -40,7 +53,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 }
 
 function AccessDeniedInline() {
+  const { roles, signOut } = useAuth();
   const navigate = useNavigate();
+  const target = roles.includes("admin")
+    ? "/admin"
+    : roles.includes("teacher")
+      ? "/teacher"
+      : roles.includes("student")
+        ? "/student"
+        : "/login";
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="max-w-md text-center">
@@ -51,12 +72,20 @@ function AccessDeniedInline() {
         <p className="mt-2 text-muted-foreground">
           You don't have permission to view this page.
         </p>
-        <button
-          onClick={() => navigate({ to: "/dashboard" })}
-          className="mt-6 inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          Back to Dashboard
-        </button>
+        <div className="mt-6 flex justify-center gap-2">
+          <button
+            onClick={() => navigate({ to: target as never })}
+            className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            Go to my dashboard
+          </button>
+          <button
+            onClick={async () => { await signOut(); navigate({ to: "/login", replace: true }); }}
+            className="inline-flex h-10 items-center rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-accent"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );

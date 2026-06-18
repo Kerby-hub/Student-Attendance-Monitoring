@@ -13,11 +13,12 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardRedirect() {
-  const { roles, loading, profile } = useAuth();
+  const { roles, authLoading, roleLoading, profile, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading || roleLoading) return;
+    if (!user) return; // ProtectedRoute handles redirect to /login
     if (profile?.must_change_password) return;
     if (roles.includes("admin")) {
       navigate({ to: "/admin", replace: true });
@@ -28,7 +29,7 @@ function DashboardRedirect() {
     } else {
       navigate({ to: "/access-denied", replace: true });
     }
-  }, [roles, loading, profile, navigate]);
+  }, [roles, authLoading, roleLoading, profile, user, navigate]);
 
   return <FullPageLoader />;
 }

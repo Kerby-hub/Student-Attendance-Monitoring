@@ -10,21 +10,28 @@ import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
+  }),
   component: LoginPage,
 });
 
 function LoginPage() {
   const { user, loading, signIn } = useAuth();
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const safeRedirect = (r?: string) =>
+    r && r.startsWith("/") && !r.startsWith("//") ? r : "/dashboard";
+
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard", replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) navigate({ to: safeRedirect(redirect) as never, replace: true });
+  }, [user, loading, navigate, redirect]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +50,7 @@ function LoginPage() {
       toast.error("Sign in failed", { description: error });
     } else {
       toast.success("Welcome back!");
-      navigate({ to: "/dashboard", replace: true });
+      navigate({ to: safeRedirect(redirect) as never, replace: true });
     }
   };
 

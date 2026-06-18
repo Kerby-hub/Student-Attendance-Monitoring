@@ -153,7 +153,7 @@ function AdminCalendarPage() {
       <PageHeader
         title="Calendar"
         description="Manage school events, exams, holidays, and announcements."
-        actions={canEdit ? (
+        action={canEdit ? (
           <Button onClick={() => setCreating({ date: ymd(today) })}>
             <Plus className="mr-1.5 h-4 w-4" />New event
           </Button>

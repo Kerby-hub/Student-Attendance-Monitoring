@@ -1,13 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, Activity, BarChart3,
+  LayoutDashboard, BarChart3, Activity,
   Users, GraduationCap, UserCog, Smartphone,
-  ClipboardCheck, LogIn, LogOut, History, Radio,
-  BookOpen, Layers, CalendarClock, CalendarDays, Building2,
-  MapPin, Map, Settings2,
+  Radio, BookOpen, Layers, CalendarClock, CalendarDays, Building2,
+  MapPin, Map,
   Bell, MessageSquare, ScrollText,
-  FileBarChart, FileSpreadsheet, FileText, Download,
-  ShieldCheck, KeyRound, DatabaseBackup, Settings,
+  Download, Settings,
   GraduationCap as Logo,
 } from "lucide-react";
 import {
@@ -24,8 +22,8 @@ const groups: NavGroup[] = [
     label: "Dashboard",
     items: [
       { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
-      { title: "Analytics", url: "/admin/reports", icon: BarChart3 },
-      { title: "Activity Feed", url: "/admin/audit-logs", icon: Activity },
+      { title: "Reports & Analytics", url: "/admin/reports", icon: BarChart3 },
+      { title: "Audit Logs", url: "/admin/audit-logs", icon: Activity },
     ],
   },
   {
@@ -38,22 +36,19 @@ const groups: NavGroup[] = [
     ],
   },
   {
-    label: "Attendance",
-    items: [
-      { title: "Check-In Records", url: "/admin/reports", icon: LogIn },
-      { title: "Check-Out Records", url: "/admin/reports", icon: LogOut },
-      { title: "Attendance Sessions", url: "/teacher/attendance", icon: Radio },
-      { title: "Attendance History", url: "/admin/reports", icon: History },
-    ],
-  },
-  {
     label: "Academic",
     items: [
       { title: "Classes", url: "/admin/sections", icon: Layers },
       { title: "Subjects", url: "/admin/subjects", icon: BookOpen },
       { title: "Schedules", url: "/admin/schedules", icon: CalendarClock },
-      { title: "Calendar", url: "/student/calendar", icon: CalendarDays },
+      { title: "Calendar", url: "/admin/calendar", icon: CalendarDays },
       { title: "Departments", url: "/admin/departments", icon: Building2 },
+    ],
+  },
+  {
+    label: "Attendance",
+    items: [
+      { title: "Attendance Sessions", url: "/teacher/attendance", icon: Radio },
     ],
   },
   {
@@ -61,7 +56,6 @@ const groups: NavGroup[] = [
     items: [
       { title: "Geofence Zones", url: "/admin/geofencing", icon: MapPin },
       { title: "Location Monitoring", url: "/admin/location", icon: Map },
-      { title: "Zone Configuration", url: "/admin/geofencing", icon: Settings2 },
     ],
   },
   {
@@ -75,19 +69,13 @@ const groups: NavGroup[] = [
   {
     label: "Reports",
     items: [
-      { title: "Daily Reports", url: "/admin/reports", icon: FileBarChart },
-      { title: "Weekly Reports", url: "/admin/reports", icon: FileSpreadsheet },
-      { title: "Monthly Reports", url: "/admin/reports", icon: FileText },
+      { title: "Reports", url: "/admin/reports", icon: BarChart3 },
       { title: "Export Center", url: "/admin/exports", icon: Download },
     ],
   },
   {
-    label: "System Administration",
+    label: "System",
     items: [
-      { title: "User Roles", url: "/admin/users", icon: KeyRound },
-      { title: "Security Settings", url: "/admin/settings", icon: ShieldCheck },
-      { title: "Audit Logs", url: "/admin/audit-logs", icon: ScrollText },
-      { title: "Backup & Recovery", url: "/admin/settings", icon: DatabaseBackup },
       { title: "System Settings", url: "/admin/settings", icon: Settings },
     ],
   },
@@ -96,8 +84,12 @@ const groups: NavGroup[] = [
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { profile, roles } = useAuth();
-  const isActive = (url: string, exact?: boolean) =>
-    exact ? pathname === url : pathname === url;
+
+  // Match exact path only — avoids highlighting multiple items that share a URL prefix.
+  const isActive = (url: string, exact?: boolean) => {
+    if (exact) return pathname === url;
+    return pathname === url || pathname.startsWith(url + "/");
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -116,35 +108,43 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="bg-sidebar scrollbar-thin">
-        {groups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-              {group.label}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item, idx) => {
-                  const active = isActive(item.url, item.exact);
-                  return (
-                    <SidebarMenuItem key={`${item.title}-${idx}`}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={item.title}
-                        className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-white data-[active=true]:font-medium"
-                      >
-                        <Link to={item.url as any}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {groups.map((group) => {
+          const groupActive = group.items.some((i) => isActive(i.url, i.exact));
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel
+                className={
+                  "px-3 text-[10px] font-semibold uppercase tracking-wider " +
+                  (groupActive ? "text-primary" : "text-sidebar-foreground/50")
+                }
+              >
+                {group.label}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isActive(item.url, item.exact);
+                    return (
+                      <SidebarMenuItem key={`${group.label}-${item.title}`}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={item.title}
+                          className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-white data-[active=true]:font-medium"
+                        >
+                          <Link to={item.url as any}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3">

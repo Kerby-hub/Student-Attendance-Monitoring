@@ -121,7 +121,7 @@ function UsersPage() {
     },
     onSuccess: () => {
       toast.success("Account created", { description: `Temporary password: ${form.password}` });
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      invalidateUserCaches(qc);
       setOpen(false); resetForm();
     },
     onError: (e: Error) => toast.error("Failed to create user", { description: e.message }),
@@ -145,7 +145,7 @@ function UsersPage() {
       const next = u.status === "active" ? "inactive" : "active";
       await setStatusFn({ data: { userId: u.id, status: next } });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => invalidateUserCaches(qc),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -153,7 +153,7 @@ function UsersPage() {
     mutationFn: async ({ u, role }: { u: UserRow; role: "admin"|"teacher"|"student" }) => {
       await setRoleFn({ data: { userId: u.id, role } });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: () => invalidateUserCaches(qc),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -161,7 +161,7 @@ function UsersPage() {
     mutationFn: async (u: UserRow) => { await deleteUserFn({ data: { userId: u.id } }); },
     onSuccess: () => {
       toast.success("User deleted");
-      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      invalidateUserCaches(qc);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -171,6 +171,10 @@ function UsersPage() {
     onSuccess: () => toast.success("Device binding reset", { description: "User can register a new device on next login." }),
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const [confirmDelete, setConfirmDelete] = useState<UserRow | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<UserRow | null>(null);
+  const [confirmResetDevice, setConfirmResetDevice] = useState<UserRow | null>(null);
 
 
   return (

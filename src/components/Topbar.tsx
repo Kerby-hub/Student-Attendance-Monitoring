@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, LogOut, Search, Settings, User as UserIcon, KeyRound, ChevronRight } from "lucide-react";
+import { Bell, LogOut, Search, Settings, User as UserIcon, KeyRound, ChevronRight, Loader2 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -60,9 +65,18 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
 
   const segments = pathname.split("/").filter(Boolean);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/login", replace: true });
+    setSigningOut(true);
+    try {
+      await signOut();
+      navigate({ to: "/login", replace: true });
+    } finally {
+      setSigningOut(false);
+      setConfirmOpen(false);
+    }
   };
 
   const initials = (profile?.full_name || profile?.email || "U")
@@ -146,12 +160,33 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setConfirmOpen(true); }} className="text-destructive focus:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={(v) => { if (!signingOut) setConfirmOpen(v); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out? You'll need to log in again to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={signingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleSignOut(); }}
+              disabled={signingOut}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {signingOut ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing out…</>) : "Sign out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }

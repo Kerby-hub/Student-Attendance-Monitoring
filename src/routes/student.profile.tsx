@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, ArrowRight, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/student/profile")({
   component: StudentProfilePage,
@@ -187,6 +188,83 @@ function StudentProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="lg:col-span-3">
+        <AttendanceSummary studentId={student.id} />
+      </div>
+    </div>
+  );
+}
+
+function AttendanceSummary({ studentId }: { studentId: string }) {
+  const { data: records = [], isLoading } = useQuery({
+    queryKey: ["my-attendance-summary", studentId],
+    enabled: !!studentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("id, status, check_in_at")
+        .eq("student_id", studentId)
+        .order("check_in_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const stats = useMemo(() => {
+    const total = records.length;
+    const present = records.filter((r) => r.status === "present").length;
+    const late = records.filter((r) => r.status === "late").length;
+    const absent = records.filter((r) => r.status === "absent").length;
+    return { total, present, late, absent, pct: total ? Math.round(((present + late) / total) * 100) : 0 };
+  }, [records]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Attendance summary</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">Your overall attendance across all classes.</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to={"/student/history" as never}>
+            View full history <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
+        ) : stats.total === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">No attendance records yet.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <SummaryStat icon={<CheckCircle2 className="h-4 w-4" />} label="Present" value={stats.present} tone="text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30" />
+              <SummaryStat icon={<Clock className="h-4 w-4" />} label="Late" value={stats.late} tone="text-amber-600 bg-amber-50 dark:bg-amber-950/30" />
+              <SummaryStat icon={<XCircle className="h-4 w-4" />} label="Absent" value={stats.absent} tone="text-destructive bg-destructive/10" />
+              <SummaryStat label="Total" value={stats.total} tone="text-primary bg-primary/10" />
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Attendance rate</span>
+                <span className="font-bold">{stats.pct}%</span>
+              </div>
+              <Progress className="mt-1.5" value={stats.pct} />
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryStat({ icon, label, value, tone }: { icon?: React.ReactNode; label: string; value: number; tone: string }) {
+  return (
+    <div className={`rounded-lg p-3 ${tone}`}>
+      <div className="flex items-center gap-1.5 text-xs font-medium">{icon}{label}</div>
+      <p className="text-2xl font-bold mt-1">{value}</p>
     </div>
   );
 }

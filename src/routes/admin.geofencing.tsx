@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, MapPin, Pencil, Trash2, Crosshair } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -28,11 +33,13 @@ type Zone = {
 
 function GeofencingPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Zone | null>(null);
+  const [toDelete, setToDelete] = useState<Zone | null>(null);
   const [form, setForm] = useState({ name: "", center_lat: 0, center_lng: 0, radius_meters: 100, active: true });
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ["geofences"],
     queryFn: async () => {
       const { data, error } = await supabase.from("geofence_zones").select("*").order("name");
@@ -41,14 +48,41 @@ function GeofencingPage() {
     },
   });
 
+  const logAudit = async (action: string, entity_id: string | null, metadata: Record<string, unknown>) => {
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_id: user?.id ?? null,
+        action,
+        entity_type: "geofence_zone",
+        entity_id,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: metadata as any,
+      });
+    } catch {
+      /* non-blocking */
+    }
+  };
+
+  const validate = (): string | null => {
+    if (!form.name.trim()) return "Name is required.";
+    if (form.center_lat < -90 || form.center_lat > 90) return "Latitude must be between -90 and 90.";
+    if (form.center_lng < -180 || form.center_lng > 180) return "Longitude must be between -180 and 180.";
+    if (form.radius_meters < 5 || form.radius_meters > 10000) return "Radius must be between 5 and 10,000 meters.";
+    return null;
+  };
+
   const upsert = useMutation({
     mutationFn: async () => {
+      const err = validate();
+      if (err) throw new Error(err);
       if (editing) {
         const { error } = await supabase.from("geofence_zones").update(form).eq("id", editing.id);
         if (error) throw error;
+        await logAudit("geofence.update", editing.id, { ...form });
       } else {
-        const { error } = await supabase.from("geofence_zones").insert(form);
+        const { data, error } = await supabase.from("geofence_zones").insert(form).select("id").single();
         if (error) throw error;
+        await logAudit("geofence.create", data?.id ?? null, { ...form });
       }
     },
     onSuccess: () => {
@@ -60,11 +94,12 @@ function GeofencingPage() {
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("geofence_zones").delete().eq("id", id);
+    mutationFn: async (z: Zone) => {
+      const { error } = await supabase.from("geofence_zones").delete().eq("id", z.id);
       if (error) throw error;
+      await logAudit("geofence.delete", z.id, { name: z.name });
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["geofences"] }); },
+    onSuccess: () => { toast.success("Zone deleted"); qc.invalidateQueries({ queryKey: ["geofences"] }); setToDelete(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -142,7 +177,7 @@ function GeofencingPage() {
                 <TableCell>{z.active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(z)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Delete "${z.name}"?`)) del.mutate(z.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete(z)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -150,9 +185,34 @@ function GeofencingPage() {
         </Table>
       </div>
 
+      {error ? (
+        <p className="mt-3 text-sm text-destructive">Failed to load zones: {(error as Error).message}</p>
+      ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Assign zones to schedules from the Schedules page (TODO: per-schedule zone picker). Validation uses the Haversine distance.
+        Assign zones to schedules from the Schedules page. Validation uses the Haversine distance.
       </p>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(v) => { if (!v) setToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this zone?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{toDelete?.name}" will be permanently removed. Schedules assigned to this zone
+              will no longer enforce its boundary. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (toDelete) del.mutate(toDelete); }}
+              disabled={del.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {del.isPending ? "Deleting…" : "Delete zone"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

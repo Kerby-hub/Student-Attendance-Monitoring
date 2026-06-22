@@ -149,13 +149,8 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const changeRole = useMutation({
-    mutationFn: async ({ u, role }: { u: UserRow; role: "admin"|"teacher"|"student" }) => {
-      await setRoleFn({ data: { userId: u.id, role } });
-    },
-    onSuccess: () => invalidateUserCaches(qc),
-    onError: (e: Error) => toast.error(e.message),
-  });
+  // Role is locked after account creation. To change a role, delete and recreate the account.
+  void setRoleFn;
 
   const delUser = useMutation({
     mutationFn: async (u: UserRow) => { await deleteUserFn({ data: { userId: u.id } }); },

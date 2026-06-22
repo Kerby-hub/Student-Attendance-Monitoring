@@ -65,9 +65,18 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
 
   const segments = pathname.split("/").filter(Boolean);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/login", replace: true });
+    setSigningOut(true);
+    try {
+      await signOut();
+      navigate({ to: "/login", replace: true });
+    } finally {
+      setSigningOut(false);
+      setConfirmOpen(false);
+    }
   };
 
   const initials = (profile?.full_name || profile?.email || "U")

@@ -190,6 +190,3 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
     </header>
   );
 }
-    </header>
-  );
-}

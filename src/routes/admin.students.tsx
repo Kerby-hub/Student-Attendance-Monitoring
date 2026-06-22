@@ -439,12 +439,16 @@ function StudentsPage() {
                   </Button>
                   {s.status === "archived" ? (
                     <Button variant="ghost" size="icon" title="Restore"
-                      onClick={() => setStatus.mutate({ id: s.id, status: "active" })}>
+                      onClick={() => setStatus.mutate({ id: s.id, status: "active", userId: s.user_id })}>
                       <ArchiveRestore className="h-4 w-4" />
                     </Button>
                   ) : (
                     <Button variant="ghost" size="icon" title="Archive"
-                      onClick={() => setStatus.mutate({ id: s.id, status: "archived" })}>
+                      onClick={() => {
+                        if (confirm(`Archive ${s.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) {
+                          setStatus.mutate({ id: s.id, status: "archived", userId: s.user_id });
+                        }
+                      }}>
                       <Archive className="h-4 w-4" />
                     </Button>
                   )}

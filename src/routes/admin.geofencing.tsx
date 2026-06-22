@@ -138,10 +138,33 @@ function GeofencingPage() {
                   <div><Label>Latitude</Label><Input type="number" step="any" value={form.center_lat} onChange={(e) => setForm({ ...form, center_lat: Number(e.target.value) })} /></div>
                   <div><Label>Longitude</Label><Input type="number" step="any" value={form.center_lng} onChange={(e) => setForm({ ...form, center_lng: Number(e.target.value) })} /></div>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={useMyLocation}>
-                  <Crosshair className="mr-1.5 h-4 w-4" /> Use my current location
-                </Button>
-                <div><Label>Radius (meters)</Label><Input type="number" value={form.radius_meters} onChange={(e) => setForm({ ...form, radius_meters: Number(e.target.value) })} /></div>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={useMyLocation}>
+                    <Crosshair className="mr-1.5 h-4 w-4" /> Use my current location
+                  </Button>
+                  <Button
+                    type="button" variant="outline" size="sm"
+                    onClick={() => {
+                      const lat = form.center_lat || 0;
+                      const lng = form.center_lng || 0;
+                      const z = lat || lng ? 17 : 3;
+                      window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${z}/${lat}/${lng}`, "_blank", "noopener");
+                      toast.info("Pick a point on the map", { description: "Right-click → 'Show address' to copy coordinates, then paste them here." });
+                    }}
+                  >
+                    <MapIcon className="mr-1.5 h-4 w-4" /> Choose on map
+                  </Button>
+                  {form.center_lat && form.center_lng ? (
+                    <a
+                      className="inline-flex items-center text-xs text-primary underline-offset-2 hover:underline"
+                      href={`https://www.google.com/maps?q=${form.center_lat},${form.center_lng}`}
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      Preview current point
+                    </a>
+                  ) : null}
+                </div>
+                <div><Label>Radius (meters)</Label><Input type="number" min={5} max={10000} value={form.radius_meters} onChange={(e) => setForm({ ...form, radius_meters: Number(e.target.value) })} /></div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

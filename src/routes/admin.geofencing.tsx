@@ -33,11 +33,13 @@ type Zone = {
 
 function GeofencingPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Zone | null>(null);
+  const [toDelete, setToDelete] = useState<Zone | null>(null);
   const [form, setForm] = useState({ name: "", center_lat: 0, center_lng: 0, radius_meters: 100, active: true });
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey: ["geofences"],
     queryFn: async () => {
       const { data, error } = await supabase.from("geofence_zones").select("*").order("name");
@@ -46,14 +48,40 @@ function GeofencingPage() {
     },
   });
 
+  const logAudit = async (action: string, entity_id: string | null, metadata: Record<string, unknown>) => {
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_id: user?.id ?? null,
+        action,
+        entity_type: "geofence_zone",
+        entity_id,
+        metadata,
+      });
+    } catch {
+      /* non-blocking */
+    }
+  };
+
+  const validate = (): string | null => {
+    if (!form.name.trim()) return "Name is required.";
+    if (form.center_lat < -90 || form.center_lat > 90) return "Latitude must be between -90 and 90.";
+    if (form.center_lng < -180 || form.center_lng > 180) return "Longitude must be between -180 and 180.";
+    if (form.radius_meters < 5 || form.radius_meters > 10000) return "Radius must be between 5 and 10,000 meters.";
+    return null;
+  };
+
   const upsert = useMutation({
     mutationFn: async () => {
+      const err = validate();
+      if (err) throw new Error(err);
       if (editing) {
         const { error } = await supabase.from("geofence_zones").update(form).eq("id", editing.id);
         if (error) throw error;
+        await logAudit("geofence.update", editing.id, { name: form.name, ...form });
       } else {
-        const { error } = await supabase.from("geofence_zones").insert(form);
+        const { data, error } = await supabase.from("geofence_zones").insert(form).select("id").single();
         if (error) throw error;
+        await logAudit("geofence.create", data?.id ?? null, { name: form.name, ...form });
       }
     },
     onSuccess: () => {
@@ -65,11 +93,12 @@ function GeofencingPage() {
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("geofence_zones").delete().eq("id", id);
+    mutationFn: async (z: Zone) => {
+      const { error } = await supabase.from("geofence_zones").delete().eq("id", z.id);
       if (error) throw error;
+      await logAudit("geofence.delete", z.id, { name: z.name });
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["geofences"] }); },
+    onSuccess: () => { toast.success("Zone deleted"); qc.invalidateQueries({ queryKey: ["geofences"] }); setToDelete(null); },
     onError: (e: Error) => toast.error(e.message),
   });
 

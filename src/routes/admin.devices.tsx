@@ -83,7 +83,7 @@ function DevicesPage() {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
     if (search) {
       const q = search.toLowerCase();
-      const hay = `${r.profile?.full_name ?? ""} ${r.profile?.email ?? ""} ${r.student_no ?? ""} ${r.device_name ?? ""}`.toLowerCase();
+      const hay = `${r.profile?.full_name ?? ""} ${r.profile?.email ?? ""} ${r.student_no ?? ""} ${r.teacher_no ?? ""} ${r.device_name ?? ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;

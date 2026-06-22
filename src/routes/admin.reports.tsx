@@ -1,17 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Search, Users, ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReportFilters, type FilterValue } from "@/components/admin/ReportFilters";
 import { fetchAttendance } from "@/lib/reports/fetch";
 import { tally, groupBy, weekRange, monthRange, fmtDate } from "@/lib/reports/aggregations";
 import { downloadCsv, downloadXlsx, downloadPdf, type Row } from "@/lib/reports/exporters";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/reports")({
   component: ReportsPage,

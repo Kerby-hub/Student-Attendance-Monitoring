@@ -185,9 +185,34 @@ function GeofencingPage() {
         </Table>
       </div>
 
+      {error ? (
+        <p className="mt-3 text-sm text-destructive">Failed to load zones: {(error as Error).message}</p>
+      ) : null}
       <p className="mt-3 text-xs text-muted-foreground">
-        Assign zones to schedules from the Schedules page (TODO: per-schedule zone picker). Validation uses the Haversine distance.
+        Assign zones to schedules from the Schedules page. Validation uses the Haversine distance.
       </p>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(v) => { if (!v) setToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this zone?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{toDelete?.name}" will be permanently removed. Schedules assigned to this zone
+              will no longer enforce its boundary. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={del.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (toDelete) del.mutate(toDelete); }}
+              disabled={del.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {del.isPending ? "Deleting…" : "Delete zone"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

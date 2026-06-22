@@ -41,6 +41,7 @@ type Student = {
   year_level: number | null;
   section_id: string | null;
   status: "active" | "inactive" | "graduated" | "archived";
+  user_id: string | null;
   profile_picture_url: string | null;
   sections?: { name: string } | null;
 };

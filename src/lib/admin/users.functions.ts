@@ -32,6 +32,35 @@ async function assertAdmin(supabase: any, userId: string) {
   if (!data) throw new Error("Forbidden: admin role required.");
 }
 
+/**
+ * Generate the next sequential ID for a student or teacher in the
+ * STU-YYYY-#### / TCH-YYYY-#### format. The sequence resets per year.
+ */
+async function nextAutoId(
+  supabaseAdmin: any,
+  kind: "student" | "teacher",
+): Promise<string> {
+  const prefix = kind === "student" ? "STU" : "TCH";
+  const table = kind === "student" ? "students" : "teachers";
+  const col = kind === "student" ? "student_no" : "teacher_no";
+  const year = new Date().getFullYear();
+  const yearPrefix = `${prefix}-${year}-`;
+  const { data } = await supabaseAdmin
+    .from(table)
+    .select(col)
+    .ilike(col, `${yearPrefix}%`)
+    .order(col, { ascending: false })
+    .limit(1);
+  let next = 1;
+  const last = data?.[0]?.[col] as string | undefined;
+  if (last) {
+    const tail = last.slice(yearPrefix.length);
+    const n = parseInt(tail, 10);
+    if (Number.isFinite(n)) next = n + 1;
+  }
+  return `${yearPrefix}${String(next).padStart(4, "0")}`;
+}
+
 export const adminCreateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: CreateUserInput) => data)
@@ -60,28 +89,32 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
     await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: data.role });
 
-    // 4) Role-specific record
-    if (data.role === "student" && data.studentData) {
+    // 4) Role-specific record (auto-generate IDs if missing)
+    if (data.role === "student") {
+      const sd = data.studentData ?? ({} as NonNullable<typeof data.studentData>);
+      const studentNo = sd.student_no?.trim() || await nextAutoId(supabaseAdmin, "student");
       await supabaseAdmin.from("students").insert({
         user_id: newUserId,
-        student_no: data.studentData.student_no,
+        student_no: studentNo,
         full_name: data.fullName,
         email: data.email,
-        program: data.studentData.program ?? null,
-        year_level: data.studentData.year_level ?? null,
-        section_id: data.studentData.section_id ?? null,
-        contact_number: data.studentData.contact_number ?? null,
-        parent_contact: data.studentData.parent_contact ?? null,
+        program: sd.program ?? null,
+        year_level: sd.year_level ?? null,
+        section_id: sd.section_id ?? null,
+        contact_number: sd.contact_number ?? null,
+        parent_contact: sd.parent_contact ?? null,
         status: data.status,
       });
-    } else if (data.role === "teacher" && data.teacherData) {
+    } else if (data.role === "teacher") {
+      const td = data.teacherData ?? ({} as NonNullable<typeof data.teacherData>);
+      const teacherNo = td.teacher_no?.trim() || await nextAutoId(supabaseAdmin, "teacher");
       await supabaseAdmin.from("teachers").insert({
         user_id: newUserId,
-        teacher_no: data.teacherData.teacher_no,
+        teacher_no: teacherNo,
         full_name: data.fullName,
         email: data.email,
-        department_id: data.teacherData.department_id ?? null,
-        position: data.teacherData.position ?? null,
+        department_id: td.department_id ?? null,
+        position: td.position ?? null,
         status: data.status,
       });
     }

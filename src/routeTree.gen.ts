@@ -25,6 +25,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as TeacherSchedulesRouteImport } from './routes/teacher.schedules'
 import { Route as TeacherReportsRouteImport } from './routes/teacher.reports'
 import { Route as TeacherNotificationsRouteImport } from './routes/teacher.notifications'
+import { Route as TeacherCheckInRecordsRouteImport } from './routes/teacher.check-in-records'
 import { Route as TeacherAttendanceRouteImport } from './routes/teacher.attendance'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
@@ -129,6 +130,11 @@ const TeacherReportsRoute = TeacherReportsRouteImport.update({
 const TeacherNotificationsRoute = TeacherNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => TeacherRoute,
+} as any)
+const TeacherCheckInRecordsRoute = TeacherCheckInRecordsRouteImport.update({
+  id: '/check-in-records',
+  path: '/check-in-records',
   getParentRoute: () => TeacherRoute,
 } as any)
 const TeacherAttendanceRoute = TeacherAttendanceRouteImport.update({
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
+  '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
   '/teacher/reports': typeof TeacherReportsRoute
   '/teacher/schedules': typeof TeacherSchedulesRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
+  '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
   '/teacher/reports': typeof TeacherReportsRoute
   '/teacher/schedules': typeof TeacherSchedulesRoute
@@ -376,6 +384,7 @@ export interface FileRoutesById {
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
+  '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
   '/teacher/notifications': typeof TeacherNotificationsRoute
   '/teacher/reports': typeof TeacherReportsRoute
   '/teacher/schedules': typeof TeacherSchedulesRoute
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
+    | '/teacher/check-in-records'
     | '/teacher/notifications'
     | '/teacher/reports'
     | '/teacher/schedules'
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
+    | '/teacher/check-in-records'
     | '/teacher/notifications'
     | '/teacher/reports'
     | '/teacher/schedules'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/student/notifications'
     | '/student/profile'
     | '/teacher/attendance'
+    | '/teacher/check-in-records'
     | '/teacher/notifications'
     | '/teacher/reports'
     | '/teacher/schedules'
@@ -639,6 +651,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/teacher/notifications'
       preLoaderRoute: typeof TeacherNotificationsRouteImport
+      parentRoute: typeof TeacherRoute
+    }
+    '/teacher/check-in-records': {
+      id: '/teacher/check-in-records'
+      path: '/check-in-records'
+      fullPath: '/teacher/check-in-records'
+      preLoaderRoute: typeof TeacherCheckInRecordsRouteImport
       parentRoute: typeof TeacherRoute
     }
     '/teacher/attendance': {
@@ -898,6 +917,7 @@ const StudentRouteWithChildren =
 
 interface TeacherRouteChildren {
   TeacherAttendanceRoute: typeof TeacherAttendanceRoute
+  TeacherCheckInRecordsRoute: typeof TeacherCheckInRecordsRoute
   TeacherNotificationsRoute: typeof TeacherNotificationsRoute
   TeacherReportsRoute: typeof TeacherReportsRoute
   TeacherSchedulesRoute: typeof TeacherSchedulesRoute
@@ -907,6 +927,7 @@ interface TeacherRouteChildren {
 
 const TeacherRouteChildren: TeacherRouteChildren = {
   TeacherAttendanceRoute: TeacherAttendanceRoute,
+  TeacherCheckInRecordsRoute: TeacherCheckInRecordsRoute,
   TeacherNotificationsRoute: TeacherNotificationsRoute,
   TeacherReportsRoute: TeacherReportsRoute,
   TeacherSchedulesRoute: TeacherSchedulesRoute,
@@ -933,13 +954,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

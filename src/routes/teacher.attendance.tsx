@@ -35,7 +35,7 @@ function TeacherAttendancePage() {
 
   return (
     <div>
-      <PageHeader title="Take attendance" description="Pick a class to open its attendance session." />
+      <PageHeader title="Attendance Session" description="Pick today's class to open its live attendance session — generate the rotating QR code, view check-ins in real time, and close the session." />
       {isLoading ? <p className="text-muted-foreground">Loading…</p> :
         data.length === 0 ? (
           <Card className="shadow-[var(--shadow-card)]"><CardContent className="py-10 text-center text-muted-foreground">No classes today.</CardContent></Card>

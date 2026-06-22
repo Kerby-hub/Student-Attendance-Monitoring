@@ -36,6 +36,8 @@ type DeviceRow = {
   last_login: string | null;
   profile: { email: string; full_name: string | null } | null;
   student_no: string | null;
+  teacher_no: string | null;
+  role: "admin" | "teacher" | "student" | null;
 };
 
 function DevicesPage() {
@@ -57,16 +59,22 @@ function DevicesPage() {
       if (error) throw error;
       const ids = (data ?? []).map((d: any) => d.user_id);
       if (ids.length === 0) return [];
-      const [{ data: profiles }, { data: students }] = await Promise.all([
+      const [{ data: profiles }, { data: students }, { data: teachers }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("id, email, full_name").in("id", ids),
         supabase.from("students").select("user_id, student_no").in("user_id", ids),
+        supabase.from("teachers").select("user_id, teacher_no").in("user_id", ids),
+        supabase.from("user_roles").select("user_id, role").in("user_id", ids),
       ]);
       const pMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       const sMap = new Map((students ?? []).map((s: any) => [s.user_id, s.student_no]));
+      const tMap = new Map((teachers ?? []).map((t: any) => [t.user_id, t.teacher_no]));
+      const rMap = new Map((roles ?? []).map((r: any) => [r.user_id, r.role]));
       return (data ?? []).map((d: any) => ({
         ...d,
         profile: pMap.get(d.user_id) ?? null,
         student_no: sMap.get(d.user_id) ?? null,
+        teacher_no: tMap.get(d.user_id) ?? null,
+        role: rMap.get(d.user_id) ?? null,
       })) as DeviceRow[];
     },
   });
@@ -75,7 +83,7 @@ function DevicesPage() {
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
     if (search) {
       const q = search.toLowerCase();
-      const hay = `${r.profile?.full_name ?? ""} ${r.profile?.email ?? ""} ${r.student_no ?? ""} ${r.device_name ?? ""}`.toLowerCase();
+      const hay = `${r.profile?.full_name ?? ""} ${r.profile?.email ?? ""} ${r.student_no ?? ""} ${r.teacher_no ?? ""} ${r.device_name ?? ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -126,7 +134,8 @@ function DevicesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Student ID</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Student / Teacher ID</TableHead>
               <TableHead>Device</TableHead>
               <TableHead>Registered</TableHead>
               <TableHead>Last login</TableHead>
@@ -136,16 +145,21 @@ function DevicesPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No registered devices yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No registered devices yet.</TableCell></TableRow>
             ) : filtered.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
                   <div className="font-medium">{r.profile?.full_name || "—"}</div>
                   <div className="text-xs text-muted-foreground">{r.profile?.email}</div>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{r.student_no || "—"}</TableCell>
+                <TableCell>
+                  {r.role ? <Badge variant="outline" className="capitalize">{r.role}</Badge> : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {r.role === "teacher" ? (r.teacher_no || "—") : r.role === "student" ? (r.student_no || "—") : "N/A"}
+                </TableCell>
                 <TableCell>
                   <div className="font-medium">{r.device_name || "Unknown"}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">{r.device_fingerprint.slice(0, 16)}…</div>

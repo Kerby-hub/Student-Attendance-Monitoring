@@ -31,7 +31,7 @@ function SchedulesPage() {
 
   return (
     <div>
-      <PageHeader title="My Schedules" description="All your assigned class meetings." />
+      <PageHeader title="My Schedules" description="Read-only view of all your assigned class meetings (subject, section, day, time, room). To start attendance, go to Attendance Session." />
       <div className="rounded-lg border bg-card overflow-x-auto shadow-[var(--shadow-card)]">
         <Table>
           <TableHeader>

@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, LogOut, Search, Settings, User as UserIcon, KeyRound, ChevronRight, Loader2 } from "lucide-react";
+import { Bell, LogOut, Settings, User as UserIcon, KeyRound, ChevronRight, Loader2 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -104,17 +103,10 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Global search */}
-        <div className="relative hidden lg:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search students, classes, sessions…"
-            className="h-9 w-64 rounded-md border-border bg-background pl-9 pr-3 text-sm shadow-none focus-visible:ring-1"
-          />
-        </div>
+        {/* Per-module search bars are used instead of a non-functional global search */}
 
         {/* Notifications */}
-        <Link to={"/student/notifications" as any} className="relative">
+        <Link to={(roles.includes("teacher") ? "/teacher/notifications" : roles.includes("admin") ? "/admin/notifications" : "/student/notifications") as any} className="relative">
           <Button variant="ghost" size="icon" className="h-9 w-9 text-foreground/80 hover:text-foreground">
             <Bell className="h-[18px] w-[18px]" />
           </Button>

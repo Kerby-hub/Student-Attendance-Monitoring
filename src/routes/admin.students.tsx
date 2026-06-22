@@ -185,8 +185,7 @@ function StudentsPage() {
     },
     onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
-      qc.invalidateQueries({ queryKey: ["students"] });
-      qc.invalidateQueries({ queryKey: ["admin-counts"] });
+      invalidateUserCaches(qc);
       setOpen(false); setEditing(null); setForm(emptyForm);
       if (result) setCredentials(result);
     },
@@ -205,14 +204,19 @@ function StudentsPage() {
   });
 
   const setStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Student["status"] }) => {
+    mutationFn: async ({ id, status, userId }: { id: string; status: Student["status"]; userId: string | null }) => {
       const { error } = await supabase.from("students").update({ status }).eq("id", id);
       if (error) throw error;
+      // Mirror to profile/auth so the user can/can't log in and other modules update.
+      if (userId) {
+        try {
+          await setStatusFn({ data: { userId, status: status === "active" ? "active" : "inactive" } });
+        } catch { /* non-fatal: student row already updated */ }
+      }
     },
     onSuccess: (_d, v) => {
-      toast.success(v.status === "archived" ? "Student archived" : "Student restored");
-      qc.invalidateQueries({ queryKey: ["students"] });
-      qc.invalidateQueries({ queryKey: ["admin-counts"] });
+      toast.success(v.status === "archived" ? "Student archived" : v.status === "active" ? "Student restored" : "Student updated");
+      invalidateUserCaches(qc);
     },
     onError: (e: Error) => toast.error(e.message),
   });

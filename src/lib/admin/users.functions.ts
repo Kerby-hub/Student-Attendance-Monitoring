@@ -32,6 +32,35 @@ async function assertAdmin(supabase: any, userId: string) {
   if (!data) throw new Error("Forbidden: admin role required.");
 }
 
+/**
+ * Generate the next sequential ID for a student or teacher in the
+ * STU-YYYY-#### / TCH-YYYY-#### format. The sequence resets per year.
+ */
+async function nextAutoId(
+  supabaseAdmin: any,
+  kind: "student" | "teacher",
+): Promise<string> {
+  const prefix = kind === "student" ? "STU" : "TCH";
+  const table = kind === "student" ? "students" : "teachers";
+  const col = kind === "student" ? "student_no" : "teacher_no";
+  const year = new Date().getFullYear();
+  const yearPrefix = `${prefix}-${year}-`;
+  const { data } = await supabaseAdmin
+    .from(table)
+    .select(col)
+    .ilike(col, `${yearPrefix}%`)
+    .order(col, { ascending: false })
+    .limit(1);
+  let next = 1;
+  const last = data?.[0]?.[col] as string | undefined;
+  if (last) {
+    const tail = last.slice(yearPrefix.length);
+    const n = parseInt(tail, 10);
+    if (Number.isFinite(n)) next = n + 1;
+  }
+  return `${yearPrefix}${String(next).padStart(4, "0")}`;
+}
+
 export const adminCreateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: CreateUserInput) => data)

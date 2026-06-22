@@ -114,7 +114,7 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
         </div>
 
         {/* Notifications */}
-        <Link to={"/student/notifications" as any} className="relative">
+        <Link to={(roles.includes("teacher") ? "/teacher/notifications" : roles.includes("admin") ? "/admin/notifications" : "/student/notifications") as any} className="relative">
           <Button variant="ghost" size="icon" className="h-9 w-9 text-foreground/80 hover:text-foreground">
             <Bell className="h-[18px] w-[18px]" />
           </Button>

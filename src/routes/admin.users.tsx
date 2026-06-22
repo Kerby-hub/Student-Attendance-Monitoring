@@ -229,7 +229,7 @@ function UsersPage() {
                   <div className="sm:col-span-2"><Label>Parent contact #</Label><Input value={form.parent_contact} onChange={(e) => setForm({ ...form, parent_contact: e.target.value })} /></div>
                 </>}
                 {form.role === "teacher" && <>
-                  <div><Label>Teacher ID</Label><Input value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} /></div>
+                  <div><Label>Teacher ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input placeholder="Auto-generated, e.g. TCH-2026-0001" value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} /></div>
                   <div><Label>Position</Label><Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} /></div>
                   <div className="sm:col-span-2"><Label>Contact #</Label><Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} /></div>
                 </>}

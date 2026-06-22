@@ -59,16 +59,22 @@ function DevicesPage() {
       if (error) throw error;
       const ids = (data ?? []).map((d: any) => d.user_id);
       if (ids.length === 0) return [];
-      const [{ data: profiles }, { data: students }] = await Promise.all([
+      const [{ data: profiles }, { data: students }, { data: teachers }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("id, email, full_name").in("id", ids),
         supabase.from("students").select("user_id, student_no").in("user_id", ids),
+        supabase.from("teachers").select("user_id, teacher_no").in("user_id", ids),
+        supabase.from("user_roles").select("user_id, role").in("user_id", ids),
       ]);
       const pMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
       const sMap = new Map((students ?? []).map((s: any) => [s.user_id, s.student_no]));
+      const tMap = new Map((teachers ?? []).map((t: any) => [t.user_id, t.teacher_no]));
+      const rMap = new Map((roles ?? []).map((r: any) => [r.user_id, r.role]));
       return (data ?? []).map((d: any) => ({
         ...d,
         profile: pMap.get(d.user_id) ?? null,
         student_no: sMap.get(d.user_id) ?? null,
+        teacher_no: tMap.get(d.user_id) ?? null,
+        role: rMap.get(d.user_id) ?? null,
       })) as DeviceRow[];
     },
   });

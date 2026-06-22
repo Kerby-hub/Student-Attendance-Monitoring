@@ -314,18 +314,17 @@ function UsersPage() {
                   <Button variant="ghost" size="icon" title="Reset password" onClick={() => resetPwd.mutate(u)}>
                     <KeyRound className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => {
-                    if (confirm(`Reset device binding for ${u.email}? They will register a new device on next login.`)) resetDevice.mutate(u);
-                  }}>
+                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => setConfirmResetDevice(u)}>
                     <Smartphone className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Toggle status" onClick={() => toggleStatus.mutate(u)}>
+                  <Button variant="ghost" size="icon" title={u.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
+                    if (u.status === "active") setConfirmDeactivate(u);
+                    else toggleStatus.mutate(u);
+                  }}>
                     {u.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                   </Button>
                   {u.id !== me?.id && (
-                    <Button variant="ghost" size="icon" title="Delete" onClick={() => {
-                      if (confirm(`Permanently delete ${u.email}? This cannot be undone.`)) delUser.mutate(u);
-                    }}>
+                    <Button variant="ghost" size="icon" title="Delete" onClick={() => setConfirmDelete(u)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   )}
@@ -335,6 +334,63 @@ function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!confirmDeactivate} onOpenChange={(v) => !v && setConfirmDeactivate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate {confirmDeactivate?.email}? They will no longer be able to access the system, but historical records will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (confirmDeactivate) toggleStatus.mutate(confirmDeactivate);
+              setConfirmDeactivate(null);
+            }}>Deactivate user</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(v) => !v && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes {confirmDelete?.email}. Their account will be removed, but linked student/teacher records will be marked archived so historical attendance is preserved. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDelete) delUser.mutate(confirmDelete);
+                setConfirmDelete(null);
+              }}
+            >Delete permanently</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmResetDevice} onOpenChange={(v) => !v && setConfirmResetDevice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset device binding?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmResetDevice?.email} will be able to register a new device on their next login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (confirmResetDevice) resetDevice.mutate(confirmResetDevice);
+              setConfirmResetDevice(null);
+            }}>Reset device</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

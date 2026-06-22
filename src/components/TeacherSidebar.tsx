@@ -15,14 +15,19 @@ const groups = [
     items: [
       { title: "Dashboard", url: "/teacher", icon: LayoutDashboard, exact: true },
       { title: "Schedules", url: "/teacher/schedules", icon: CalendarClock },
-      { title: "Attendance Sessions", url: "/teacher/attendance", icon: Radio },
-      { title: "Check-In Records", url: "/teacher/attendance", icon: ClipboardCheck },
+      { title: "Attendance Session", url: "/teacher/attendance", icon: Radio },
+      { title: "Check-In Records", url: "/teacher/check-in-records", icon: ClipboardCheck },
     ],
   },
   {
     label: "Insights",
     items: [
       { title: "Reports", url: "/teacher/reports", icon: FileBarChart },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
       { title: "Notifications", url: "/teacher/notifications", icon: Bell },
     ],
   },

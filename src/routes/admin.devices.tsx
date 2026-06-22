@@ -134,7 +134,8 @@ function DevicesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>User</TableHead>
-              <TableHead>Student ID</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Student / Teacher ID</TableHead>
               <TableHead>Device</TableHead>
               <TableHead>Registered</TableHead>
               <TableHead>Last login</TableHead>
@@ -144,16 +145,21 @@ function DevicesPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No registered devices yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No registered devices yet.</TableCell></TableRow>
             ) : filtered.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
                   <div className="font-medium">{r.profile?.full_name || "—"}</div>
                   <div className="text-xs text-muted-foreground">{r.profile?.email}</div>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{r.student_no || "—"}</TableCell>
+                <TableCell>
+                  {r.role ? <Badge variant="outline" className="capitalize">{r.role}</Badge> : <span className="text-muted-foreground">—</span>}
+                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  {r.role === "teacher" ? (r.teacher_no || "—") : r.role === "student" ? (r.student_no || "—") : "N/A"}
+                </TableCell>
                 <TableCell>
                   <div className="font-medium">{r.device_name || "Unknown"}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">{r.device_fingerprint.slice(0, 16)}…</div>

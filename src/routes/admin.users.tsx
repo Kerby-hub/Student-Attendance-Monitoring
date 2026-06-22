@@ -296,14 +296,11 @@ function UsersPage() {
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
-                  <Select value={u.role ?? ""} onValueChange={(v) => changeRole.mutate({ u, role: v as any })}>
-                    <SelectTrigger className="h-8 w-32"><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="teacher">Teacher</SelectItem>
-                      <SelectItem value="student">Student</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {u.role ? (
+                    <Badge variant="outline" className="capitalize">{u.role}</Badge>
+                  ) : (
+                    <Badge variant="secondary">—</Badge>
+                  )}
                 </TableCell>
                 <TableCell>
                   {u.status === "active"

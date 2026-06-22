@@ -165,6 +165,13 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     if (data.userId === context.userId) throw new Error("You cannot delete your own account.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // students.user_id and teachers.user_id are ON DELETE SET NULL — so before
+    // we delete the auth user, mark their role-specific rows as archived/inactive
+    // to keep historical records intact but exclude them from active lists.
+    await supabaseAdmin.from("students").update({ status: "archived" }).eq("user_id", data.userId);
+    await supabaseAdmin.from("teachers").update({ status: "inactive" }).eq("user_id", data.userId);
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("audit_logs").insert({

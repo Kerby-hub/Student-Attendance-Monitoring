@@ -218,6 +218,23 @@ function TeachersPage() {
         password={credentials?.password ?? ""}
       />
 
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <Input
+          placeholder="Search name, email, or ID…"
+          className="flex-1"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -230,26 +247,44 @@ function TeachersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No teachers yet.</TableCell></TableRow>
-            ) : data.map((t) => (
-              <TableRow key={t.id} className={t.status === "inactive" ? "opacity-60" : ""}>
-                <TableCell className="font-mono text-sm">{t.teacher_no}</TableCell>
-                <TableCell className="font-medium">{t.full_name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{t.email}</TableCell>
-                <TableCell>{t.departments?.name ?? "—"}</TableCell>
-                <TableCell>
-                  {t.status === "active" ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Toggle status" onClick={() => toggleStatus.mutate(t)}>
-                    {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            ) : (() => {
+              const q = search.trim().toLowerCase();
+              const filtered = data.filter((t) => {
+                if (filterStatus !== "all" && t.status !== filterStatus) return false;
+                if (!q) return true;
+                return (
+                  t.full_name.toLowerCase().includes(q) ||
+                  (t.email ?? "").toLowerCase().includes(q) ||
+                  t.teacher_no.toLowerCase().includes(q)
+                );
+              });
+              if (filtered.length === 0) {
+                return <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No teachers match the filters.</TableCell></TableRow>;
+              }
+              return filtered.map((t) => (
+                <TableRow key={t.id} className={t.status === "inactive" ? "opacity-60" : ""}>
+                  <TableCell className="font-mono text-sm">{t.teacher_no}</TableCell>
+                  <TableCell className="font-medium">{t.full_name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.email}</TableCell>
+                  <TableCell>{t.departments?.name ?? "—"}</TableCell>
+                  <TableCell>
+                    {t.status === "active" ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" title={t.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
+                      if (t.status === "active") {
+                        if (!confirm(`Deactivate ${t.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) return;
+                      }
+                      toggleStatus.mutate(t);
+                    }}>
+                      {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ));
+            })()}
           </TableBody>
         </Table>
       </div>

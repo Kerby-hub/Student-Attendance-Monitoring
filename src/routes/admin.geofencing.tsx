@@ -78,11 +78,11 @@ function GeofencingPage() {
       if (editing) {
         const { error } = await supabase.from("geofence_zones").update(form).eq("id", editing.id);
         if (error) throw error;
-        await logAudit("geofence.update", editing.id, { name: form.name, ...form });
+        await logAudit("geofence.update", editing.id, { ...form });
       } else {
         const { data, error } = await supabase.from("geofence_zones").insert(form).select("id").single();
         if (error) throw error;
-        await logAudit("geofence.create", data?.id ?? null, { name: form.name, ...form });
+        await logAudit("geofence.create", data?.id ?? null, { ...form });
       }
     },
     onSuccess: () => {

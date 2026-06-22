@@ -110,7 +110,7 @@ function TeachersPage() {
     },
     onSuccess: (result) => {
       toast.success(editing ? "Teacher updated" : "Teacher created");
-      qc.invalidateQueries({ queryKey: ["teachers"] });
+      invalidateUserCaches(qc);
       setOpen(false); setEditing(null);
       setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: "" });
       if (result) setCredentials(result);
@@ -129,8 +129,14 @@ function TeachersPage() {
       const next = t.status === "active" ? "inactive" : "active";
       const { error } = await supabase.from("teachers").update({ status: next }).eq("id", t.id);
       if (error) throw error;
+      if (t.user_id) {
+        try { await setStatusFn({ data: { userId: t.user_id, status: next } }); } catch { /* non-fatal */ }
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
+    onSuccess: () => {
+      invalidateUserCaches(qc);
+      toast.success("Teacher status updated");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 

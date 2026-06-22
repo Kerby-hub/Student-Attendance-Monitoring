@@ -166,7 +166,7 @@ function TeachersPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editing ? "Edit teacher" : "New teacher"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label>Teacher ID</Label><Input value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} placeholder="T-001" /></div>
+                <div><Label>Teacher ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} placeholder="Auto-generated, e.g. TCH-2026-0001" disabled={!editing} /></div>
                 <div><Label>Position</Label><Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Instructor" /></div>
                 <div className="sm:col-span-2"><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
                 <div className="sm:col-span-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>

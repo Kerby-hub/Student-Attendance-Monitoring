@@ -104,14 +104,7 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Global search */}
-        <div className="relative hidden lg:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search students, classes, sessions…"
-            className="h-9 w-64 rounded-md border-border bg-background pl-9 pr-3 text-sm shadow-none focus-visible:ring-1"
-          />
-        </div>
+        {/* Per-module search bars are used instead of a non-functional global search */}
 
         {/* Notifications */}
         <Link to={(roles.includes("teacher") ? "/teacher/notifications" : roles.includes("admin") ? "/admin/notifications" : "/student/notifications") as any} className="relative">

@@ -55,7 +55,8 @@ function GeofencingPage() {
         action,
         entity_type: "geofence_zone",
         entity_id,
-        metadata,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: metadata as any,
       });
     } catch {
       /* non-blocking */

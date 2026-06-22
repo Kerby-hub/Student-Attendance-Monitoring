@@ -160,11 +160,11 @@ function TeacherReports() {
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Students" value={summary.uniqueStudents} />
-        <StatCard label="Present" value={summary.present} />
-        <StatCard label="Late" value={summary.late} />
-        <StatCard label="Absent" value={summary.absent} />
-        <StatCard label="Attendance %" value={`${summary.pct}%`} />
+        <StatCard icon={Users} label="Students" value={summary.uniqueStudents} />
+        <StatCard icon={CheckCircle2} label="Present" value={summary.present} />
+        <StatCard icon={Clock} label="Late" value={summary.late} />
+        <StatCard icon={XCircle} label="Absent" value={summary.absent} />
+        <StatCard icon={Percent} label="Attendance %" value={`${summary.pct}%`} />
       </div>
 
       <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">

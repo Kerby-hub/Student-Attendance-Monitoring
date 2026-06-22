@@ -64,16 +64,20 @@ function ReportsPage() {
       </CardContent></Card>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-3 grid w-full grid-cols-4 sm:w-auto sm:inline-grid">
+        <TabsList className="mb-3 flex w-full flex-wrap sm:w-auto sm:inline-flex">
           <TabsTrigger value="detailed">Detailed</TabsTrigger>
+          <TabsTrigger value="logs"><ClipboardList className="mr-1.5 h-3.5 w-3.5" />Logs</TabsTrigger>
           <TabsTrigger value="daily">Daily</TabsTrigger>
           <TabsTrigger value="weekly">Weekly</TabsTrigger>
           <TabsTrigger value="monthly">Monthly</TabsTrigger>
+          <TabsTrigger value="users"><Users className="mr-1.5 h-3.5 w-3.5" />Users</TabsTrigger>
         </TabsList>
         <TabsContent value="detailed"><DetailedView filters={filters} /></TabsContent>
+        <TabsContent value="logs"><LogsView filters={filters} /></TabsContent>
         <TabsContent value="daily"><DailyView baseFilters={filters} /></TabsContent>
         <TabsContent value="weekly"><WeeklyView baseFilters={filters} /></TabsContent>
         <TabsContent value="monthly"><MonthlyView baseFilters={filters} /></TabsContent>
+        <TabsContent value="users"><UsersReport /></TabsContent>
       </Tabs>
     </div>
   );

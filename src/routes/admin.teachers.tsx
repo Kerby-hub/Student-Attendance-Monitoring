@@ -202,7 +202,7 @@ function TeachersPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.teacher_no || !form.full_name || !form.email || upsert.isPending}>
+                <Button onClick={() => upsert.mutate()} disabled={!form.full_name || !form.email || (!!editing && !form.teacher_no) || upsert.isPending}>
                   {upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>

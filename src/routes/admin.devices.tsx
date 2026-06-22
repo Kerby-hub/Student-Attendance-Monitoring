@@ -36,6 +36,8 @@ type DeviceRow = {
   last_login: string | null;
   profile: { email: string; full_name: string | null } | null;
   student_no: string | null;
+  teacher_no: string | null;
+  role: "admin" | "teacher" | "student" | null;
 };
 
 function DevicesPage() {

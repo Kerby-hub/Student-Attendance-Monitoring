@@ -41,12 +41,15 @@ function TeachersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("active");
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
     temp_password: "",
   });
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
+  const setStatusFn = useServerFn(adminSetStatus);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["teachers"],

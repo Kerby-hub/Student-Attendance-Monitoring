@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileBarChart, Search } from "lucide-react";
+import { Download, FileBarChart, Search, Users, CheckCircle2, Clock, XCircle, Percent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/admin/PageHeader";

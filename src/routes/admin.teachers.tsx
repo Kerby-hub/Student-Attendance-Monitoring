@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, UserX, UserCheck, Settings2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { adminCreateUser } from "@/lib/admin/users.functions";
+import { adminCreateUser, adminSetStatus } from "@/lib/admin/users.functions";
+import { invalidateUserCaches } from "@/lib/admin/invalidate";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/admin/teachers")({
 type Teacher = {
   id: string; teacher_no: string; full_name: string; email: string;
   position: string | null; department_id: string | null;
+  user_id: string | null;
   status: "active" | "inactive";
   departments?: { name: string } | null;
 };
@@ -39,12 +41,15 @@ function TeachersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("active");
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
     temp_password: "",
   });
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
+  const setStatusFn = useServerFn(adminSetStatus);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["teachers"],
@@ -105,7 +110,7 @@ function TeachersPage() {
     },
     onSuccess: (result) => {
       toast.success(editing ? "Teacher updated" : "Teacher created");
-      qc.invalidateQueries({ queryKey: ["teachers"] });
+      invalidateUserCaches(qc);
       setOpen(false); setEditing(null);
       setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: "" });
       if (result) setCredentials(result);
@@ -124,8 +129,14 @@ function TeachersPage() {
       const next = t.status === "active" ? "inactive" : "active";
       const { error } = await supabase.from("teachers").update({ status: next }).eq("id", t.id);
       if (error) throw error;
+      if (t.user_id) {
+        try { await setStatusFn({ data: { userId: t.user_id, status: next } }); } catch { /* non-fatal */ }
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
+    onSuccess: () => {
+      invalidateUserCaches(qc);
+      toast.success("Teacher status updated");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -207,6 +218,23 @@ function TeachersPage() {
         password={credentials?.password ?? ""}
       />
 
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+        <Input
+          placeholder="Search name, email, or ID…"
+          className="flex-1"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">All statuses</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -219,26 +247,44 @@ function TeachersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No teachers yet.</TableCell></TableRow>
-            ) : data.map((t) => (
-              <TableRow key={t.id} className={t.status === "inactive" ? "opacity-60" : ""}>
-                <TableCell className="font-mono text-sm">{t.teacher_no}</TableCell>
-                <TableCell className="font-medium">{t.full_name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{t.email}</TableCell>
-                <TableCell>{t.departments?.name ?? "—"}</TableCell>
-                <TableCell>
-                  {t.status === "active" ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" title="Toggle status" onClick={() => toggleStatus.mutate(t)}>
-                    {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            ) : (() => {
+              const q = search.trim().toLowerCase();
+              const filtered = data.filter((t) => {
+                if (filterStatus !== "all" && t.status !== filterStatus) return false;
+                if (!q) return true;
+                return (
+                  t.full_name.toLowerCase().includes(q) ||
+                  (t.email ?? "").toLowerCase().includes(q) ||
+                  t.teacher_no.toLowerCase().includes(q)
+                );
+              });
+              if (filtered.length === 0) {
+                return <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No teachers match the filters.</TableCell></TableRow>;
+              }
+              return filtered.map((t) => (
+                <TableRow key={t.id} className={t.status === "inactive" ? "opacity-60" : ""}>
+                  <TableCell className="font-mono text-sm">{t.teacher_no}</TableCell>
+                  <TableCell className="font-medium">{t.full_name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.email}</TableCell>
+                  <TableCell>{t.departments?.name ?? "—"}</TableCell>
+                  <TableCell>
+                    {t.status === "active" ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" title={t.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
+                      if (t.status === "active") {
+                        if (!confirm(`Deactivate ${t.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) return;
+                      }
+                      toggleStatus.mutate(t);
+                    }}>
+                      {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ));
+            })()}
           </TableBody>
         </Table>
       </div>

@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, Archive, ArchiveRestore, Search, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { adminCreateUser } from "@/lib/admin/users.functions";
+import { adminCreateUser, adminSetStatus } from "@/lib/admin/users.functions";
+import { invalidateUserCaches } from "@/lib/admin/invalidate";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ type Student = {
   year_level: number | null;
   section_id: string | null;
   status: "active" | "inactive" | "graduated" | "archived";
+  user_id: string | null;
   profile_picture_url: string | null;
   sections?: { name: string } | null;
 };
@@ -75,6 +77,7 @@ function StudentsPage() {
   const [form, setForm] = useState(emptyForm);
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
+  const setStatusFn = useServerFn(adminSetStatus);
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],
@@ -183,8 +186,7 @@ function StudentsPage() {
     },
     onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
-      qc.invalidateQueries({ queryKey: ["students"] });
-      qc.invalidateQueries({ queryKey: ["admin-counts"] });
+      invalidateUserCaches(qc);
       setOpen(false); setEditing(null); setForm(emptyForm);
       if (result) setCredentials(result);
     },
@@ -203,14 +205,19 @@ function StudentsPage() {
   });
 
   const setStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: Student["status"] }) => {
+    mutationFn: async ({ id, status, userId }: { id: string; status: Student["status"]; userId: string | null }) => {
       const { error } = await supabase.from("students").update({ status }).eq("id", id);
       if (error) throw error;
+      // Mirror to profile/auth so the user can/can't log in and other modules update.
+      if (userId) {
+        try {
+          await setStatusFn({ data: { userId, status: status === "active" ? "active" : "inactive" } });
+        } catch { /* non-fatal: student row already updated */ }
+      }
     },
     onSuccess: (_d, v) => {
-      toast.success(v.status === "archived" ? "Student archived" : "Student restored");
-      qc.invalidateQueries({ queryKey: ["students"] });
-      qc.invalidateQueries({ queryKey: ["admin-counts"] });
+      toast.success(v.status === "archived" ? "Student archived" : v.status === "active" ? "Student restored" : "Student updated");
+      invalidateUserCaches(qc);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -432,12 +439,16 @@ function StudentsPage() {
                   </Button>
                   {s.status === "archived" ? (
                     <Button variant="ghost" size="icon" title="Restore"
-                      onClick={() => setStatus.mutate({ id: s.id, status: "active" })}>
+                      onClick={() => setStatus.mutate({ id: s.id, status: "active", userId: s.user_id })}>
                       <ArchiveRestore className="h-4 w-4" />
                     </Button>
                   ) : (
                     <Button variant="ghost" size="icon" title="Archive"
-                      onClick={() => setStatus.mutate({ id: s.id, status: "archived" })}>
+                      onClick={() => {
+                        if (confirm(`Archive ${s.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) {
+                          setStatus.mutate({ id: s.id, status: "archived", userId: s.user_id });
+                        }
+                      }}>
                       <Archive className="h-4 w-4" />
                     </Button>
                   )}

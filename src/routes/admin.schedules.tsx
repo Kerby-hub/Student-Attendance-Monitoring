@@ -161,7 +161,7 @@ function SchedulesPage() {
             <DialogContent className="max-w-2xl">
               <DialogHeader><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-3 sm:grid-cols-2">
+
                 <div className="sm:col-span-2">
                   <Label>Subject<RequiredMark /></Label>
                   <Select value={form.subject_id} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>

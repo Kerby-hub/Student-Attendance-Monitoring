@@ -119,13 +119,35 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       });
     }
 
-    // 5) Audit log
+    // 5) Stub-mode credential email — logged for admin review.
+    //    Replace with a real email send once the email provider is configured.
+    const appUrl = process.env.APP_PUBLIC_URL || process.env.SITE_URL || "";
+    const subject = "Your Student Attendance Monitoring System Account";
+    const body =
+      `Hello ${data.fullName},\n\n` +
+      `An account has been created for you in the Student Attendance Monitoring System.\n\n` +
+      `Login email: ${data.email}\n` +
+      `Temporary password: ${data.password}\n` +
+      `Login page: ${appUrl || "[your site]"}/login\n\n` +
+      `For security, you will be required to change your password after your first login.\n` +
+      `Please do not share this password with anyone.\n\nThank you.`;
+    await supabaseAdmin.from("email_logs").insert({
+      recipient_user_id: newUserId,
+      recipient_email: data.email,
+      subject,
+      body,
+      template: "credentials",
+      status: "stubbed",
+      provider_response: { stub: true },
+    });
+
+    // 6) Audit log
     await supabaseAdmin.from("audit_logs").insert({
       actor_id: context.userId,
       action: "user_created",
       entity_type: "auth.users",
       entity_id: newUserId,
-      metadata: { email: data.email, role: data.role, status: data.status },
+      metadata: { email: data.email, role: data.role, status: data.status, email_sent: "stubbed" },
     });
 
     return { ok: true, userId: newUserId };

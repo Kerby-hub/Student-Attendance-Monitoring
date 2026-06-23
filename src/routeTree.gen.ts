@@ -44,6 +44,7 @@ import { Route as AdminNotificationsRouteImport } from './routes/admin.notificat
 import { Route as AdminLocationRouteImport } from './routes/admin.location'
 import { Route as AdminGeofencingRouteImport } from './routes/admin.geofencing'
 import { Route as AdminExportsRouteImport } from './routes/admin.exports'
+import { Route as AdminEmailLogsRouteImport } from './routes/admin.email-logs'
 import { Route as AdminDevicesRouteImport } from './routes/admin.devices'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
@@ -227,6 +228,11 @@ const AdminExportsRoute = AdminExportsRouteImport.update({
   path: '/exports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEmailLogsRoute = AdminEmailLogsRouteImport.update({
+  id: '/email-logs',
+  path: '/email-logs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDevicesRoute = AdminDevicesRouteImport.update({
   id: '/devices',
   path: '/devices',
@@ -280,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
@@ -321,6 +328,7 @@ export interface FileRoutesByTo {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/devices': typeof AdminDevicesRoute
+  '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/exports': typeof AdminExportsRoute
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
@@ -412,6 +421,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/email-logs'
     | '/admin/exports'
     | '/admin/geofencing'
     | '/admin/location'
@@ -453,6 +463,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/email-logs'
     | '/admin/exports'
     | '/admin/geofencing'
     | '/admin/location'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/departments'
     | '/admin/devices'
+    | '/admin/email-logs'
     | '/admin/exports'
     | '/admin/geofencing'
     | '/admin/location'
@@ -786,6 +798,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminExportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/email-logs': {
+      id: '/admin/email-logs'
+      path: '/email-logs'
+      fullPath: '/admin/email-logs'
+      preLoaderRoute: typeof AdminEmailLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/devices': {
       id: '/admin/devices'
       path: '/devices'
@@ -856,6 +875,7 @@ interface AdminRouteChildren {
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminDepartmentsRoute: typeof AdminDepartmentsRoute
   AdminDevicesRoute: typeof AdminDevicesRoute
+  AdminEmailLogsRoute: typeof AdminEmailLogsRoute
   AdminExportsRoute: typeof AdminExportsRoute
   AdminGeofencingRoute: typeof AdminGeofencingRoute
   AdminLocationRoute: typeof AdminLocationRoute
@@ -877,6 +897,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCalendarRoute: AdminCalendarRoute,
   AdminDepartmentsRoute: AdminDepartmentsRoute,
   AdminDevicesRoute: AdminDevicesRoute,
+  AdminEmailLogsRoute: AdminEmailLogsRoute,
   AdminExportsRoute: AdminExportsRoute,
   AdminGeofencingRoute: AdminGeofencingRoute,
   AdminLocationRoute: AdminLocationRoute,

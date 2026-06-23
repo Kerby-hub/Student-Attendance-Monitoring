@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
+import { passwordSchema } from "@/lib/validation";
+import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/change-password")({
   component: () => (

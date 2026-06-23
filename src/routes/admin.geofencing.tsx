@@ -139,11 +139,24 @@ function GeofencingPage() {
             <DialogContent>
               <DialogHeader><DialogTitle>{editing ? "Edit zone" : "New zone"}</DialogTitle></DialogHeader>
               <div className="grid gap-3">
-                <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Main Campus Room 101" /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Latitude</Label><Input type="number" step="any" value={form.center_lat} onChange={(e) => setForm({ ...form, center_lat: Number(e.target.value) })} /></div>
-                  <div><Label>Longitude</Label><Input type="number" step="any" value={form.center_lng} onChange={(e) => setForm({ ...form, center_lng: Number(e.target.value) })} /></div>
+                <div>
+                  <Label>Name<RequiredMark /></Label>
+                  <Input value={form.name} className={cn(errors.name && invalidInputClass)} onChange={(e) => { setForm({ ...form, name: e.target.value }); clearErr("name"); }} placeholder="Main Campus Room 101" />
+                  <FieldError message={errors.name} />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Latitude<RequiredMark /></Label>
+                    <Input type="number" step="any" className={cn(errors.center_lat && invalidInputClass)} value={form.center_lat} onChange={(e) => { setForm({ ...form, center_lat: Number(e.target.value) }); clearErr("center_lat"); }} />
+                    <FieldError message={errors.center_lat} />
+                  </div>
+                  <div>
+                    <Label>Longitude<RequiredMark /></Label>
+                    <Input type="number" step="any" className={cn(errors.center_lng && invalidInputClass)} value={form.center_lng} onChange={(e) => { setForm({ ...form, center_lng: Number(e.target.value) }); clearErr("center_lng"); }} />
+                    <FieldError message={errors.center_lng} />
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={useMyLocation}>
                     <Crosshair className="mr-1.5 h-4 w-4" /> Use my current location

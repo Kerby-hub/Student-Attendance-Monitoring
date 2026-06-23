@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -51,6 +51,7 @@ function SchedulesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
+  const [viewStudents, setViewStudents] = useState<Schedule | null>(null);
   const [form, setForm] = useState(empty);
   const [zoneIds, setZoneIds] = useState<string[]>([]);
 
@@ -264,6 +265,7 @@ function SchedulesPage() {
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{s.semester} · {s.school_year}</TableCell>
                 <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" title="View students" onClick={() => setViewStudents(s)}><Users className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this schedule?")) remove.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
@@ -272,6 +274,62 @@ function SchedulesPage() {
           </TableBody>
         </Table>
       </div>
+      <ScheduleStudentsDialog schedule={viewStudents} onClose={() => setViewStudents(null)} />
     </div>
+  );
+}
+
+function ScheduleStudentsDialog({ schedule, onClose }: { schedule: Schedule | null; onClose: () => void }) {
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["schedule-students", schedule?.section_id],
+    enabled: !!schedule?.section_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, student_no, full_name, email, status")
+        .eq("section_id", schedule!.section_id)
+        .eq("status", "active")
+        .order("full_name");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  return (
+    <Dialog open={!!schedule} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            Students — {schedule?.subjects?.code} · {schedule?.sections?.name}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              ) : data.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">No active students in this section.</TableCell></TableRow>
+              ) : data.map((st: any) => (
+                <TableRow key={st.id}>
+                  <TableCell className="font-mono text-xs">{st.student_no}</TableCell>
+                  <TableCell>{st.full_name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{st.email}</TableCell>
+                  <TableCell><Badge variant="outline" className="capitalize">{st.status}</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Close</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

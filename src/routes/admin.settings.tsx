@@ -30,6 +30,7 @@ function SettingsPage() {
   const [grace, setGrace] = useState(10);
   const [radius, setRadius] = useState(100);
   const [smsProvider, setSmsProvider] = useState<SmsProvider>("stub");
+  const [emailProvider, setEmailProvider] = useState<EmailProvider>("stub");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,6 +43,8 @@ function SettingsPage() {
       setRadius(Number(map.get("default_geofence_radius_m") ?? 100));
       const p = parseStr(map.get("sms_provider"), "stub");
       setSmsProvider(p === "semaphore" ? "semaphore" : "stub");
+      const ep = parseStr(map.get("email_provider"), "stub");
+      setEmailProvider(ep === "resend" ? "resend" : "stub");
       setLoading(false);
     })();
   }, []);
@@ -52,12 +55,14 @@ function SettingsPage() {
       { key: "late_grace_minutes", value: grace },
       { key: "default_geofence_radius_m", value: radius },
       { key: "sms_provider", value: smsProvider },
+      { key: "email_provider", value: emailProvider },
     ];
     for (const u of updates) {
       await (supabase as any).from("system_settings").upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() });
     }
     toast.success("Settings saved");
   };
+
 
   return (
     <div className="space-y-6">

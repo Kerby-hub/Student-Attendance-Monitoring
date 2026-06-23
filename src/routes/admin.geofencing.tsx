@@ -183,12 +183,29 @@ function GeofencingPage() {
                     </a>
                   ) : null}
                 </div>
-                <div><Label>Radius (meters)</Label><Input type="number" min={5} max={10000} value={form.radius_meters} onChange={(e) => setForm({ ...form, radius_meters: Number(e.target.value) })} /></div>
+                <div>
+                  <Label>Radius (meters)<RequiredMark /></Label>
+                  <Input type="number" min={5} max={10000} className={cn(errors.radius_meters && invalidInputClass)} value={form.radius_meters} onChange={(e) => { setForm({ ...form, radius_meters: Number(e.target.value) }); clearErr("radius_meters"); }} />
+                  <FieldError message={errors.radius_meters} />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.name || upsert.isPending}>{editing ? "Save" : "Create"}</Button>
+                <Button
+                  onClick={() => {
+                    const errs: Record<string, string> = {};
+                    if (!form.name.trim()) errs.name = "Name is required.";
+                    if (!(form.center_lat >= -90 && form.center_lat <= 90)) errs.center_lat = "Latitude must be between -90 and 90.";
+                    if (!(form.center_lng >= -180 && form.center_lng <= 180)) errs.center_lng = "Longitude must be between -180 and 180.";
+                    if (!(form.radius_meters > 0)) errs.radius_meters = "Radius must be greater than 0.";
+                    else if (form.radius_meters < 5 || form.radius_meters > 10000) errs.radius_meters = "Radius must be between 5 and 10,000 meters.";
+                    setErrors(errs);
+                    if (Object.keys(errs).length === 0) upsert.mutate();
+                  }}
+                  disabled={upsert.isPending}
+                >{editing ? "Save" : "Create"}</Button>
               </DialogFooter>
+
             </DialogContent>
           </Dialog>
         }

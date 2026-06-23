@@ -16,6 +16,8 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 type SmsProvider = "stub" | "semaphore";
+type EmailProvider = "stub" | "resend";
+
 
 function parseStr(v: unknown, fallback: string): string {
   if (v == null) return fallback;

@@ -20,6 +20,9 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
+import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/admin/geofencing")({
   component: GeofencingPage,
@@ -38,6 +41,9 @@ function GeofencingPage() {
   const [editing, setEditing] = useState<Zone | null>(null);
   const [toDelete, setToDelete] = useState<Zone | null>(null);
   const [form, setForm] = useState({ name: "", center_lat: 0, center_lng: 0, radius_meters: 100, active: true });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+
 
   const { data = [], isLoading, error } = useQuery({
     queryKey: ["geofences"],
@@ -133,11 +139,24 @@ function GeofencingPage() {
             <DialogContent>
               <DialogHeader><DialogTitle>{editing ? "Edit zone" : "New zone"}</DialogTitle></DialogHeader>
               <div className="grid gap-3">
-                <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Main Campus Room 101" /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Latitude</Label><Input type="number" step="any" value={form.center_lat} onChange={(e) => setForm({ ...form, center_lat: Number(e.target.value) })} /></div>
-                  <div><Label>Longitude</Label><Input type="number" step="any" value={form.center_lng} onChange={(e) => setForm({ ...form, center_lng: Number(e.target.value) })} /></div>
+                <div>
+                  <Label>Name<RequiredMark /></Label>
+                  <Input value={form.name} className={cn(errors.name && invalidInputClass)} onChange={(e) => { setForm({ ...form, name: e.target.value }); clearErr("name"); }} placeholder="Main Campus Room 101" />
+                  <FieldError message={errors.name} />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Latitude<RequiredMark /></Label>
+                    <Input type="number" step="any" className={cn(errors.center_lat && invalidInputClass)} value={form.center_lat} onChange={(e) => { setForm({ ...form, center_lat: Number(e.target.value) }); clearErr("center_lat"); }} />
+                    <FieldError message={errors.center_lat} />
+                  </div>
+                  <div>
+                    <Label>Longitude<RequiredMark /></Label>
+                    <Input type="number" step="any" className={cn(errors.center_lng && invalidInputClass)} value={form.center_lng} onChange={(e) => { setForm({ ...form, center_lng: Number(e.target.value) }); clearErr("center_lng"); }} />
+                    <FieldError message={errors.center_lng} />
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={useMyLocation}>
                     <Crosshair className="mr-1.5 h-4 w-4" /> Use my current location
@@ -164,12 +183,29 @@ function GeofencingPage() {
                     </a>
                   ) : null}
                 </div>
-                <div><Label>Radius (meters)</Label><Input type="number" min={5} max={10000} value={form.radius_meters} onChange={(e) => setForm({ ...form, radius_meters: Number(e.target.value) })} /></div>
+                <div>
+                  <Label>Radius (meters)<RequiredMark /></Label>
+                  <Input type="number" min={5} max={10000} className={cn(errors.radius_meters && invalidInputClass)} value={form.radius_meters} onChange={(e) => { setForm({ ...form, radius_meters: Number(e.target.value) }); clearErr("radius_meters"); }} />
+                  <FieldError message={errors.radius_meters} />
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.name || upsert.isPending}>{editing ? "Save" : "Create"}</Button>
+                <Button
+                  onClick={() => {
+                    const errs: Record<string, string> = {};
+                    if (!form.name.trim()) errs.name = "Name is required.";
+                    if (!(form.center_lat >= -90 && form.center_lat <= 90)) errs.center_lat = "Latitude must be between -90 and 90.";
+                    if (!(form.center_lng >= -180 && form.center_lng <= 180)) errs.center_lng = "Longitude must be between -180 and 180.";
+                    if (!(form.radius_meters > 0)) errs.radius_meters = "Radius must be greater than 0.";
+                    else if (form.radius_meters < 5 || form.radius_meters > 10000) errs.radius_meters = "Radius must be between 5 and 10,000 meters.";
+                    setErrors(errs);
+                    if (Object.keys(errs).length === 0) upsert.mutate();
+                  }}
+                  disabled={upsert.isPending}
+                >{editing ? "Save" : "Create"}</Button>
               </DialogFooter>
+
             </DialogContent>
           </Dialog>
         }

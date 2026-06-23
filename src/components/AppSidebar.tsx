@@ -63,9 +63,10 @@ const groups: NavGroup[] = [
     items: [
       { title: "Notification Logs", url: "/admin/notifications", icon: ScrollText },
       { title: "Broadcast Messages", url: "/admin/broadcast", icon: Bell },
-      { title: "SMS Settings", url: "/admin/settings", icon: MessageSquare },
+      { title: "Email Logs", url: "/admin/email-logs", icon: MessageSquare },
     ],
   },
+
   {
     label: "Reports",
     items: [

@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
+import { passwordSchema } from "@/lib/validation";
+import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/change-password")({
   component: () => (
@@ -24,18 +28,24 @@ function Page() {
   const [pwd, setPwd] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ pwd?: string; confirm?: string }>({});
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwd.length < 8) return toast.error("Password must be at least 8 characters");
-    if (pwd !== confirm) return toast.error("Passwords do not match");
+    const errs: { pwd?: string; confirm?: string } = {};
+    const pwdCheck = passwordSchema.safeParse(pwd);
+    if (!pwdCheck.success) errs.pwd = pwdCheck.error.issues[0]?.message ?? "Invalid password.";
+    if (!confirm) errs.confirm = "Please confirm your password.";
+    else if (pwd !== confirm) errs.confirm = "Passwords do not match.";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
     setSubmitting(true);
     const { error } = await supabase.auth.updateUser({ password: pwd });
     if (error) {
       setSubmitting(false);
       return toast.error("Failed to update password", { description: error.message });
     }
-    // Clear the must_change_password flag
     await supabase.from("profiles").update({ must_change_password: false }).eq("id", user!.id);
     await refreshProfile();
     setSubmitting(false);
@@ -60,20 +70,23 @@ function Page() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-4" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="new">New password</Label>
+              <Label htmlFor="new">New password<RequiredMark /></Label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="new" type="password" className="pl-9" value={pwd} onChange={(e) => setPwd(e.target.value)} autoComplete="new-password" />
+                <Input id="new" type="password" className={cn("pl-9", errors.pwd && invalidInputClass)} value={pwd} onChange={(e) => { setPwd(e.target.value); if (errors.pwd) setErrors((x) => ({ ...x, pwd: undefined })); }} autoComplete="new-password" />
               </div>
+              <FieldError message={errors.pwd} />
+              <p className="text-[11px] text-muted-foreground">At least 8 characters, with uppercase, lowercase, and a number.</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirm">Confirm new password</Label>
+              <Label htmlFor="confirm">Confirm new password<RequiredMark /></Label>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="confirm" type="password" className="pl-9" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
+                <Input id="confirm" type="password" className={cn("pl-9", errors.confirm && invalidInputClass)} value={confirm} onChange={(e) => { setConfirm(e.target.value); if (errors.confirm) setErrors((x) => ({ ...x, confirm: undefined })); }} autoComplete="new-password" />
               </div>
+              <FieldError message={errors.confirm} />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Updating…" : "Update password"}
@@ -84,3 +97,4 @@ function Page() {
     </div>
   );
 }
+

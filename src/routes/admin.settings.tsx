@@ -16,6 +16,8 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 type SmsProvider = "stub" | "semaphore";
+type EmailProvider = "stub" | "resend";
+
 
 function parseStr(v: unknown, fallback: string): string {
   if (v == null) return fallback;
@@ -28,6 +30,7 @@ function SettingsPage() {
   const [grace, setGrace] = useState(10);
   const [radius, setRadius] = useState(100);
   const [smsProvider, setSmsProvider] = useState<SmsProvider>("stub");
+  const [emailProvider, setEmailProvider] = useState<EmailProvider>("stub");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +43,8 @@ function SettingsPage() {
       setRadius(Number(map.get("default_geofence_radius_m") ?? 100));
       const p = parseStr(map.get("sms_provider"), "stub");
       setSmsProvider(p === "semaphore" ? "semaphore" : "stub");
+      const ep = parseStr(map.get("email_provider"), "stub");
+      setEmailProvider(ep === "resend" ? "resend" : "stub");
       setLoading(false);
     })();
   }, []);
@@ -50,12 +55,14 @@ function SettingsPage() {
       { key: "late_grace_minutes", value: grace },
       { key: "default_geofence_radius_m", value: radius },
       { key: "sms_provider", value: smsProvider },
+      { key: "email_provider", value: emailProvider },
     ];
     for (const u of updates) {
       await (supabase as any).from("system_settings").upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() });
     }
     toast.success("Settings saved");
   };
+
 
   return (
     <div className="space-y-6">
@@ -104,7 +111,41 @@ function SettingsPage() {
             </CardContent>
           </Card>
 
+          <Card className="max-w-xl shadow-[var(--shadow-card)]">
+            <CardHeader><CardTitle>Account Email (credentials)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Email provider</Label>
+                <Select value={emailProvider} onValueChange={(v) => setEmailProvider(v as EmailProvider)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stub">Stub (log only — no real email)</SelectItem>
+                    <SelectItem value="resend">Resend</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {emailProvider === "stub" ? (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Stub mode</AlertTitle>
+                  <AlertDescription>
+                    Credential emails are logged to <strong>Email Logs</strong> but not actually delivered. Admins can read each generated email there.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Resend mode</AlertTitle>
+                  <AlertDescription>
+                    Real emails will be sent via Resend. Configure <code>RESEND_API_KEY</code> and (optionally) <code>RESEND_FROM_EMAIL</code> as server secrets. Failures are recorded in Email Logs.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
           <Button onClick={save}>Save settings</Button>
+
         </>
       )}
     </div>

@@ -111,7 +111,41 @@ function SettingsPage() {
             </CardContent>
           </Card>
 
+          <Card className="max-w-xl shadow-[var(--shadow-card)]">
+            <CardHeader><CardTitle>Account Email (credentials)</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Email provider</Label>
+                <Select value={emailProvider} onValueChange={(v) => setEmailProvider(v as EmailProvider)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stub">Stub (log only — no real email)</SelectItem>
+                    <SelectItem value="resend">Resend</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {emailProvider === "stub" ? (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Stub mode</AlertTitle>
+                  <AlertDescription>
+                    Credential emails are logged to <strong>Email Logs</strong> but not actually delivered. Admins can read each generated email there.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Resend mode</AlertTitle>
+                  <AlertDescription>
+                    Real emails will be sent via Resend. Configure <code>RESEND_API_KEY</code> and (optionally) <code>RESEND_FROM_EMAIL</code> as server secrets. Failures are recorded in Email Logs.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
           <Button onClick={save}>Save settings</Button>
+
         </>
       )}
     </div>

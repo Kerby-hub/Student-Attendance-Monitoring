@@ -161,39 +161,43 @@ function SchedulesPage() {
             <DialogContent className="max-w-2xl">
               <DialogHeader><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <Label>Subject</Label>
-                  <Select value={form.subject_id} onValueChange={(v) => setForm({ ...form, subject_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                  <Label>Subject<RequiredMark /></Label>
+                  <Select value={form.subject_id} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>
+                    <SelectTrigger className={cn(errors.subject_id && invalidInputClass)}><SelectValue placeholder="Select subject" /></SelectTrigger>
                     <SelectContent>{subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}</SelectContent>
                   </Select>
+                  <FieldError message={errors.subject_id} />
                 </div>
                 <div>
-                  <Label>Teacher</Label>
-                  <Select value={form.teacher_id} onValueChange={(v) => setForm({ ...form, teacher_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>
+                  <Label>Teacher<RequiredMark /></Label>
+                  <Select value={form.teacher_id} onValueChange={(v) => { setForm({ ...form, teacher_id: v }); clearErr("teacher_id"); }}>
+                    <SelectTrigger className={cn(errors.teacher_id && invalidInputClass)}><SelectValue placeholder="Select teacher" /></SelectTrigger>
                     <SelectContent>{teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}</SelectContent>
                   </Select>
+                  <FieldError message={errors.teacher_id} />
                 </div>
                 <div>
-                  <Label>Section</Label>
-                  <Select value={form.section_id} onValueChange={(v) => setForm({ ...form, section_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
+                  <Label>Section<RequiredMark /></Label>
+                  <Select value={form.section_id} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
+                    <SelectTrigger className={cn(errors.section_id && invalidInputClass)}><SelectValue placeholder="Select section" /></SelectTrigger>
                     <SelectContent>{sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.school_year})</SelectItem>)}</SelectContent>
                   </Select>
+                  <FieldError message={errors.section_id} />
                 </div>
                 <div><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Rm 101" /></div>
                 <div>
-                  <Label>Day</Label>
+                  <Label>Day<RequiredMark /></Label>
                   <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v as Day })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{DAYS.map((d) => <SelectItem key={d} value={d} className="capitalize">{d}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label>Start</Label><Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} /></div>
-                <div><Label>End</Label><Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} /></div>
-                <div><Label>Semester</Label><Input value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} placeholder="1st" /></div>
-                <div><Label>School year</Label><Input value={form.school_year} onChange={(e) => setForm({ ...form, school_year: e.target.value })} placeholder="2025-2026" /></div>
+                <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
+                <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>
+                <div><Label>Semester<RequiredMark /></Label><Input value={form.semester} className={cn(errors.semester && invalidInputClass)} onChange={(e) => { setForm({ ...form, semester: e.target.value }); clearErr("semester"); }} placeholder="1st" /><FieldError message={errors.semester} /></div>
+                <div><Label>School year<RequiredMark /></Label><Input value={form.school_year} className={cn(errors.school_year && invalidInputClass)} onChange={(e) => { setForm({ ...form, school_year: e.target.value }); clearErr("school_year"); }} placeholder="2025-2026" /><FieldError message={errors.school_year} /></div>
 
                 <div className="sm:col-span-2">
                   <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Allowed geofence zones</Label>
@@ -220,10 +224,23 @@ function SchedulesPage() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
-                  onClick={() => upsert.mutate()}
-                  disabled={!form.subject_id || !form.teacher_id || !form.section_id || upsert.isPending}
+                  onClick={() => {
+                    const errs: Record<string, string> = {};
+                    if (!form.subject_id) errs.subject_id = "Subject is required.";
+                    if (!form.teacher_id) errs.teacher_id = "Teacher is required.";
+                    if (!form.section_id) errs.section_id = "Section is required.";
+                    if (!form.start_time) errs.start_time = "Start time is required.";
+                    if (!form.end_time) errs.end_time = "End time is required.";
+                    if (form.start_time && form.end_time && form.end_time <= form.start_time) errs.end_time = "End time must be after start time.";
+                    if (!form.semester.trim()) errs.semester = "Semester is required.";
+                    if (!form.school_year.trim()) errs.school_year = "School year is required.";
+                    setErrors(errs);
+                    if (Object.keys(errs).length === 0) upsert.mutate();
+                  }}
+                  disabled={upsert.isPending}
                 >{editing ? "Save" : "Create"}</Button>
               </DialogFooter>
+
             </DialogContent>
           </Dialog>
         }

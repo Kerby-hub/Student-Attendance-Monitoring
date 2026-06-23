@@ -380,6 +380,42 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          provider_response: Json | null
+          recipient_email: string
+          recipient_user_id: string | null
+          status: string
+          subject: string
+          template: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          provider_response?: Json | null
+          recipient_email: string
+          recipient_user_id?: string | null
+          status?: string
+          subject: string
+          template?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          provider_response?: Json | null
+          recipient_email?: string
+          recipient_user_id?: string | null
+          status?: string
+          subject?: string
+          template?: string | null
+        }
+        Relationships: []
+      }
       geofence_zones: {
         Row: {
           active: boolean

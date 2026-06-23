@@ -57,6 +57,9 @@ function SchedulesPage() {
   const [viewStudents, setViewStudents] = useState<Schedule | null>(null);
   const [form, setForm] = useState(empty);
   const [zoneIds, setZoneIds] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["schedules"],

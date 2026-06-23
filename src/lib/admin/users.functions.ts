@@ -171,7 +171,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       body,
       template: "credentials",
       status: emailStatus,
-      provider_response: emailProviderInfo,
+      provider_response: emailProviderInfo as never,
     });
 
     // 6) Audit log

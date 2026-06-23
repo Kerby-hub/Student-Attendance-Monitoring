@@ -333,10 +333,3 @@ function ScheduleStudentsDialog({ schedule, onClose }: { schedule: Schedule | nu
     </Dialog>
   );
 }
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}

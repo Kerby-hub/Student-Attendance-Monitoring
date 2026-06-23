@@ -9,8 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
+import { GuestOnlyRoute } from "@/components/GuestOnlyRoute";
+
 export const Route = createFileRoute("/forgot-password")({
-  component: ForgotPasswordPage,
+  component: () => (
+    <GuestOnlyRoute>
+      <ForgotPasswordPage />
+    </GuestOnlyRoute>
+  ),
 });
 
 function ForgotPasswordPage() {

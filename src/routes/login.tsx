@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GraduationCap, Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,16 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { GuestOnlyRoute } from "@/components/GuestOnlyRoute";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>) => ({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
   }),
-  component: LoginPage,
+  component: () => (
+    <GuestOnlyRoute>
+      <LoginPage />
+    </GuestOnlyRoute>
+  ),
 });
 
 function LoginPage() {
-  const { user, loading, signIn } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const { redirect } = Route.useSearch();
   const [submitting, setSubmitting] = useState(false);
@@ -28,10 +33,6 @@ function LoginPage() {
 
   const safeRedirect = (r?: string) =>
     r && r.startsWith("/") && !r.startsWith("//") ? r : "/dashboard";
-
-  useEffect(() => {
-    if (!loading && user) navigate({ to: safeRedirect(redirect) as never, replace: true });
-  }, [user, loading, navigate, redirect]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +51,9 @@ function LoginPage() {
       toast.error("Sign in failed", { description: error });
     } else {
       toast.success("Welcome back!");
-      navigate({ to: safeRedirect(redirect) as never, replace: true });
+      // GuestOnlyRoute will replace-navigate to the role-correct dashboard
+      // once roles load. If a specific redirect was requested, honor it.
+      if (redirect) navigate({ to: safeRedirect(redirect) as never, replace: true });
     }
   };
 

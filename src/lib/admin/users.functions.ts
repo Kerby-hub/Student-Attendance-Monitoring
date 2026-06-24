@@ -261,7 +261,7 @@ export const adminUpdateUserProfile = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const profilePatch: Record<string, unknown> = {};
+    const profilePatch: { full_name?: string; email?: string } = {};
     if (typeof data.fullName === "string") profilePatch.full_name = data.fullName;
     if (typeof data.email === "string" && data.email) profilePatch.email = data.email;
     if (Object.keys(profilePatch).length > 0) {

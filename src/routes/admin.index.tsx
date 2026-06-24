@@ -63,6 +63,29 @@ function AdminDashboardPage() {
     },
   });
 
+  const { data: sessionsToday = 0 } = useQuery({
+    queryKey: ["admin-sessions-today"],
+    queryFn: async () => {
+      const [from, to] = todayRangeISO();
+      const { count } = await supabase.from("attendance_sessions")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", from).lt("created_at", to);
+      return count ?? 0;
+    },
+    refetchInterval: 60000,
+  });
+
+  const { data: pendingDevices = 0 } = useQuery({
+    queryKey: ["admin-devices-pending"],
+    queryFn: async () => {
+      const { count } = await supabase.from("device_registrations")
+        .select("*", { count: "exact", head: true }).eq("status", "pending");
+      return count ?? 0;
+    },
+  });
+
+
+
   const { data: today = [] } = useQuery({
     queryKey: ["admin-today"],
     queryFn: async () => {

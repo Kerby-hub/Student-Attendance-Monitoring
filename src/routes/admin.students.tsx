@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Plus, Pencil, Archive, ArchiveRestore, Search, Eye, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { adminCreateUser, adminSetStatus } from "@/lib/admin/users.functions";
+import { adminCreateUser, adminSetStatus, adminUpdateUserProfile } from "@/lib/admin/users.functions";
 import { invalidateUserCaches } from "@/lib/admin/invalidate";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
@@ -78,6 +78,7 @@ function StudentsPage() {
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
   const setStatusFn = useServerFn(adminSetStatus);
+  const updateProfileFn = useServerFn(adminUpdateUserProfile);
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["students"],
@@ -150,6 +151,19 @@ function StudentsPage() {
         };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
         if (error) throw error;
+        // Keep profiles + auth metadata in sync so Teacher/Student dashboards,
+        // Topbar, and AuthContext show the updated name everywhere.
+        if (editing.user_id) {
+          try {
+            await updateProfileFn({
+              data: {
+                userId: editing.user_id,
+                fullName: full || form.student_no,
+                email: email || undefined,
+              },
+            });
+          } catch { /* non-fatal: student row already updated */ }
+        }
         return null;
       }
 

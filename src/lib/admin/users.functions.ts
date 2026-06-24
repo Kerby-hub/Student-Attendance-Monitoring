@@ -247,6 +247,49 @@ export const adminSetRole = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Update profile fields that are shared across all role dashboards
+ * (full_name, email). Keeps profiles, auth metadata, and the role-specific
+ * row (students/teachers) in sync so dashboards never show a stale name.
+ */
+export const adminUpdateUserProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { userId: string; fullName?: string; email?: string }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const profilePatch: { full_name?: string; email?: string } = {};
+    if (typeof data.fullName === "string") profilePatch.full_name = data.fullName;
+    if (typeof data.email === "string" && data.email) profilePatch.email = data.email;
+    if (Object.keys(profilePatch).length > 0) {
+      await supabaseAdmin.from("profiles").update(profilePatch).eq("id", data.userId);
+    }
+
+    // Keep auth metadata in sync so anything reading user_metadata also updates.
+    const authUpdate: Record<string, unknown> = {};
+    if (typeof data.email === "string" && data.email) authUpdate.email = data.email;
+    if (typeof data.fullName === "string") {
+      authUpdate.user_metadata = { full_name: data.fullName };
+    }
+    if (Object.keys(authUpdate).length > 0) {
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(data.userId, authUpdate as never);
+      } catch { /* non-fatal */ }
+    }
+
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: context.userId,
+      action: "user_profile_updated",
+      entity_type: "auth.users",
+      entity_id: data.userId,
+      metadata: profilePatch as never,
+    });
+    return { ok: true };
+  });
+
 export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { userId: string }) => data)

@@ -239,8 +239,9 @@ function AdminDashboardPage() {
           }%`}
           tone="success"
         />
-        <StatCard icon={Users} label="Teachers" value={counts?.teachers ?? 0} tone="neutral" />
-        <StatCard icon={GraduationCap} label="Students" value={counts?.students ?? 0} tone="neutral" />
+        <StatCard icon={CalendarClock} label="Sessions Today" value={sessionsToday} tone="primary" />
+        <StatCard icon={Smartphone} label="Pending Device Approvals" value={pendingDevices} tone="warning" />
+
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

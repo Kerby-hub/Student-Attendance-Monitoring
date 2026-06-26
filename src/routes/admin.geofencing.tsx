@@ -177,8 +177,17 @@ function GeofencingPage() {
                     >
                       Preview current point
                     </a>
+                  {form.center_lat && form.center_lng ? (
+                    <a
+                      className="inline-flex items-center text-xs text-primary underline-offset-2 hover:underline"
+                      href={`https://www.google.com/maps?q=${form.center_lat},${form.center_lng}`}
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      Preview current point
+                    </a>
                   ) : null}
                 </div>
+                <p className="text-xs text-muted-foreground">Click on the map to choose the geofence center.</p>
                 <div>
                   <Label>Radius (meters)<RequiredMark /></Label>
                   <Input type="number" min={5} max={10000} className={cn(errors.radius_meters && invalidInputClass)} value={form.radius_meters} onChange={(e) => { setForm({ ...form, radius_meters: Number(e.target.value) }); clearErr("radius_meters"); }} />

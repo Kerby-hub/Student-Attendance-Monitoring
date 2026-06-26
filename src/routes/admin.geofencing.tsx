@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
+import { MapPicker } from "@/components/admin/MapPicker";
 
 
 export const Route = createFileRoute("/admin/geofencing")({

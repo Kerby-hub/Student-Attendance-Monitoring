@@ -269,6 +269,19 @@ function GeofencingPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MapPicker
+        open={mapOpen}
+        onOpenChange={setMapOpen}
+        initialLat={form.center_lat}
+        initialLng={form.center_lng}
+        radiusMeters={form.radius_meters}
+        onApply={(lat, lng) => {
+          setForm((f) => ({ ...f, center_lat: lat, center_lng: lng }));
+          clearErr("center_lat");
+          clearErr("center_lng");
+        }}
+      />
     </div>
   );
 }

@@ -42,6 +42,7 @@ function GeofencingPage() {
   const [editing, setEditing] = useState<Zone | null>(null);
   const [toDelete, setToDelete] = useState<Zone | null>(null);
   const [form, setForm] = useState({ name: "", center_lat: 0, center_lng: 0, radius_meters: 100, active: true });
+  const [mapOpen, setMapOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 

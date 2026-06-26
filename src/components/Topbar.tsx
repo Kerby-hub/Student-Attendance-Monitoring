@@ -104,7 +104,8 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
       </nav>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Per-module search bars are used instead of a non-functional global search */}
+        <ThemeToggle />
+
 
         {/* Notifications */}
         <Link to={(roles.includes("teacher") ? "/teacher/notifications" : roles.includes("admin") ? "/admin/notifications" : "/student/notifications") as any} className="relative">

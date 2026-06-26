@@ -165,13 +165,7 @@ function GeofencingPage() {
                   </Button>
                   <Button
                     type="button" variant="outline" size="sm"
-                    onClick={() => {
-                      const lat = form.center_lat || 0;
-                      const lng = form.center_lng || 0;
-                      const z = lat || lng ? 17 : 3;
-                      window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${z}/${lat}/${lng}`, "_blank", "noopener");
-                      toast.info("Pick a point on the map", { description: "Right-click → 'Show address' to copy coordinates, then paste them here." });
-                    }}
+                    onClick={() => setMapOpen(true)}
                   >
                     <MapIcon className="mr-1.5 h-4 w-4" /> Choose on map
                   </Button>

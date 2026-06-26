@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
-  LayoutDashboard, CalendarClock, ClipboardCheck, FileBarChart, Bell,
-  Radio, BookMarked, Megaphone, BarChart3,
+  LayoutDashboard, ScanLine, ClipboardList, User, Calendar, Bell,
+  Radio, Megaphone, UserCog,
   GraduationCap as Logo,
 } from "lucide-react";
 import {
@@ -13,48 +13,43 @@ import { CollapsibleNavGroup, type NavGroup } from "@/components/CollapsibleNavG
 const groups: NavGroup[] = [
   {
     label: "Dashboard", icon: LayoutDashboard,
-    items: [{ title: "Dashboard", url: "/teacher", icon: LayoutDashboard, exact: true }],
-  },
-  {
-    label: "Classes", icon: BookMarked,
-    items: [
-      { title: "Schedules", url: "/teacher/schedules", icon: CalendarClock },
-    ],
+    items: [{ title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true }],
   },
   {
     label: "Attendance", icon: Radio,
     items: [
-      { title: "Attendance Session", url: "/teacher/attendance", icon: Radio },
-      { title: "Check-In Records", url: "/teacher/check-in-records", icon: ClipboardCheck },
+      { title: "Scan Attendance", url: "/student/attendance", icon: ScanLine },
+      { title: "Attendance History", url: "/student/history", icon: ClipboardList },
     ],
   },
   {
-    label: "Reports", icon: BarChart3,
+    label: "Student", icon: UserCog,
     items: [
-      { title: "Teacher Reports", url: "/teacher/reports", icon: FileBarChart },
+      { title: "Profile", url: "/student/profile", icon: User },
+      { title: "Calendar", url: "/student/calendar", icon: Calendar },
     ],
   },
   {
     label: "Communication", icon: Megaphone,
     items: [
-      { title: "Notifications", url: "/teacher/notifications", icon: Bell },
+      { title: "Notifications", url: "/student/notifications", icon: Bell },
     ],
   },
 ];
 
-export function TeacherSidebar() {
+export function StudentSidebar() {
   const { profile, roles } = useAuth();
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="border-b border-sidebar-border bg-sidebar px-3 py-4">
-        <Link to="/teacher" className="flex items-center gap-2.5">
+        <Link to="/student" className="flex items-center gap-2.5">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-glow text-primary-foreground shadow-md">
             <Logo className="h-5 w-5" />
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold text-sidebar-foreground">SAMS</p>
-            <p className="truncate text-[11px] text-sidebar-foreground/60">Teacher Portal</p>
+            <p className="truncate text-[11px] text-sidebar-foreground/60">Student Portal</p>
           </div>
         </Link>
       </SidebarHeader>
@@ -64,7 +59,7 @@ export function TeacherSidebar() {
           <CollapsibleNavGroup
             key={g.label}
             group={g}
-            storageKey={`sams.sidebar.teacher.${g.label}`}
+            storageKey={`sams.sidebar.student.${g.label}`}
           />
         ))}
       </SidebarContent>
@@ -79,7 +74,7 @@ export function TeacherSidebar() {
               {profile?.full_name || profile?.email}
             </p>
             <p className="truncate text-[10px] uppercase tracking-wider text-sidebar-foreground/50">
-              {roles.find((r) => r === "teacher") || roles[0] || "user"}
+              {roles.find((r) => r === "student") || roles[0] || "user"}
             </p>
           </div>
         </div>

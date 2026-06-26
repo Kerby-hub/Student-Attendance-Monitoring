@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
+import { MapPicker } from "@/components/admin/MapPicker";
 
 
 export const Route = createFileRoute("/admin/geofencing")({
@@ -41,6 +42,7 @@ function GeofencingPage() {
   const [editing, setEditing] = useState<Zone | null>(null);
   const [toDelete, setToDelete] = useState<Zone | null>(null);
   const [form, setForm] = useState({ name: "", center_lat: 0, center_lng: 0, radius_meters: 100, active: true });
+  const [mapOpen, setMapOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
@@ -163,13 +165,7 @@ function GeofencingPage() {
                   </Button>
                   <Button
                     type="button" variant="outline" size="sm"
-                    onClick={() => {
-                      const lat = form.center_lat || 0;
-                      const lng = form.center_lng || 0;
-                      const z = lat || lng ? 17 : 3;
-                      window.open(`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${z}/${lat}/${lng}`, "_blank", "noopener");
-                      toast.info("Pick a point on the map", { description: "Right-click → 'Show address' to copy coordinates, then paste them here." });
-                    }}
+                    onClick={() => setMapOpen(true)}
                   >
                     <MapIcon className="mr-1.5 h-4 w-4" /> Choose on map
                   </Button>
@@ -183,6 +179,7 @@ function GeofencingPage() {
                     </a>
                   ) : null}
                 </div>
+                <p className="text-xs text-muted-foreground">Click on the map to choose the geofence center.</p>
                 <div>
                   <Label>Radius (meters)<RequiredMark /></Label>
                   <Input type="number" min={5} max={10000} className={cn(errors.radius_meters && invalidInputClass)} value={form.radius_meters} onChange={(e) => { setForm({ ...form, radius_meters: Number(e.target.value) }); clearErr("radius_meters"); }} />
@@ -272,6 +269,19 @@ function GeofencingPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MapPicker
+        open={mapOpen}
+        onOpenChange={setMapOpen}
+        initialLat={form.center_lat}
+        initialLng={form.center_lng}
+        radiusMeters={form.radius_meters}
+        onApply={(lat, lng) => {
+          setForm((f) => ({ ...f, center_lat: lat, center_lng: lng }));
+          clearErr("center_lat");
+          clearErr("center_lng");
+        }}
+      />
     </div>
   );
 }

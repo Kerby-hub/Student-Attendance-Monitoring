@@ -325,7 +325,7 @@ function AdminDashboardPage() {
                   <Pie data={distribution} dataKey="value" nameKey="name" outerRadius={80} label>
                     {distribution.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>

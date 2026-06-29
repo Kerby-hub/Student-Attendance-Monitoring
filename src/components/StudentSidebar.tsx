@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
-  LayoutDashboard, ScanLine, ClipboardList, User, Calendar, Bell,
+  LayoutDashboard, ScanLine, ClipboardList, Calendar, Bell,
   Radio, Megaphone, UserCog,
   GraduationCap as Logo,
 } from "lucide-react";
@@ -25,7 +25,6 @@ const groups: NavGroup[] = [
   {
     label: "Student", icon: UserCog,
     items: [
-      { title: "Profile", url: "/student/profile", icon: User },
       { title: "Calendar", url: "/student/calendar", icon: Calendar },
     ],
   },
@@ -36,6 +35,7 @@ const groups: NavGroup[] = [
     ],
   },
 ];
+
 
 export function StudentSidebar() {
   const { profile, roles } = useAuth();

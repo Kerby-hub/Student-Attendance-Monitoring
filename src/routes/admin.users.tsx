@@ -330,7 +330,7 @@ function UsersPage() {
               <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No users match your filters.</TableCell></TableRow>
-            ) : filtered.map((u) => (
+            ) : pageRows.map((u) => (
               <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : ""}>
                 <TableCell className="font-medium">
                   {u.full_name || "—"}
@@ -373,6 +373,26 @@ function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <p className="text-xs text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}</span>–
+            <span className="font-medium text-foreground">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> accounts
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <ChevronLeft className="mr-1 h-4 w-4" />Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">Page <span className="font-medium text-foreground">{page}</span> of <span className="font-medium text-foreground">{totalPages}</span></span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Next<ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       <AlertDialog open={!!confirmDeactivate} onOpenChange={(v) => !v && setConfirmDeactivate(null)}>
         <AlertDialogContent>

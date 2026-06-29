@@ -60,6 +60,10 @@ function UsersPage() {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const PAGE_SIZE = 10;
+
 
   const createUserFn = useServerFn(adminCreateUser);
   const resetPwdFn = useServerFn(adminResetPassword);

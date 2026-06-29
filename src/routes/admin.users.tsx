@@ -97,6 +97,26 @@ function UsersPage() {
     return true;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [search, filterRole, filterStatus]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const validateForm = () => {
+    const e: Record<string, string> = {};
+    if (!form.fullName.trim()) e.fullName = "Full name is required.";
+    if (!form.email.trim()) e.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address.";
+    if (!form.password || form.password.length < 8) e.password = "Password must be at least 8 characters.";
+    if (form.role === "student") {
+      if (form.contact_number && !/^[+\d][\d\s-]{6,}$/.test(form.contact_number)) e.contact_number = "Enter a valid phone number.";
+      if (form.year_level && (form.year_level < 1 || form.year_level > 10)) e.year_level = "Year level must be between 1 and 10.";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+
   const [form, setForm] = useState({
     email: "", password: randomPassword(), fullName: "", role: "student" as "admin"|"teacher"|"student", status: "active" as "active"|"inactive",
     student_no: "", program: "", year_level: 1, contact_number: "", parent_contact: "",

@@ -219,10 +219,18 @@ function UsersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Label>Full name</Label><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="sm:col-span-2">
+                  <Label>Full name<RequiredMark /></Label>
+                  <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={cn(errors.fullName && invalidInputClass)} />
+                  <FieldError message={errors.fullName} />
+                </div>
                 <div>
-                  <Label>Role</Label>
+                  <Label>Email<RequiredMark /></Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={cn(errors.email && invalidInputClass)} />
+                  <FieldError message={errors.email} />
+                </div>
+                <div>
+                  <Label>Role<RequiredMark /></Label>
                   <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -233,7 +241,7 @@ function UsersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Status</Label>
+                  <Label>Status<RequiredMark /></Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -242,19 +250,28 @@ function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Temporary password</Label>
+                <div className="sm:col-span-2">
+                  <Label>Temporary password<RequiredMark /></Label>
                   <div className="flex gap-2">
-                    <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={cn(errors.password && invalidInputClass)} />
                     <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, password: randomPassword() })}>Generate</Button>
                   </div>
+                  <FieldError message={errors.password} />
                 </div>
 
                 {form.role === "student" && <>
                   <div><Label>Student ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input placeholder="Auto-generated, e.g. STU-2026-0001" value={form.student_no} onChange={(e) => setForm({ ...form, student_no: e.target.value })} /></div>
                   <div><Label>Program</Label><Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
-                  <div><Label>Year level</Label><Input type="number" value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} /></div>
-                  <div><Label>Contact #</Label><Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} /></div>
+                  <div>
+                    <Label>Year level</Label>
+                    <Input type="number" min={1} max={10} value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} className={cn(errors.year_level && invalidInputClass)} />
+                    <FieldError message={errors.year_level} />
+                  </div>
+                  <div>
+                    <Label>Contact #</Label>
+                    <Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} className={cn(errors.contact_number && invalidInputClass)} />
+                    <FieldError message={errors.contact_number} />
+                  </div>
                   <div className="sm:col-span-2"><Label>Parent contact #</Label><Input value={form.parent_contact} onChange={(e) => setForm({ ...form, parent_contact: e.target.value })} /></div>
                 </>}
                 {form.role === "teacher" && <>
@@ -265,10 +282,11 @@ function UsersPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => createUser.mutate()} disabled={!form.email || !form.fullName || createUser.isPending}>
+                <Button onClick={() => { if (validateForm()) createUser.mutate(); }} disabled={createUser.isPending}>
                   {createUser.isPending ? "Creating…" : "Create"}
                 </Button>
               </DialogFooter>
+
             </DialogContent>
           </Dialog>
         }

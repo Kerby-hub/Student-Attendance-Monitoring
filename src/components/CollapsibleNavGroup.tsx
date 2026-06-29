@@ -85,7 +85,7 @@ export function CollapsibleNavGroup({
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-white data-[active=true]:font-medium"
+                  className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-medium"
                 >
                   <Link to={item.url as any}>
                     <item.icon className="h-4 w-4" />

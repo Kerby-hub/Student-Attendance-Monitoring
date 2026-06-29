@@ -29,6 +29,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect } from "react";
+
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersPage,
@@ -55,6 +60,10 @@ function UsersPage() {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const PAGE_SIZE = 10;
+
 
   const createUserFn = useServerFn(adminCreateUser);
   const resetPwdFn = useServerFn(adminResetPassword);
@@ -87,6 +96,26 @@ function UsersPage() {
     }
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => { setPage(1); }, [search, filterRole, filterStatus]);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const validateForm = () => {
+    const e: Record<string, string> = {};
+    if (!form.fullName.trim()) e.fullName = "Full name is required.";
+    if (!form.email.trim()) e.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address.";
+    if (!form.password || form.password.length < 8) e.password = "Password must be at least 8 characters.";
+    if (form.role === "student") {
+      if (form.contact_number && !/^[+\d][\d\s-]{6,}$/.test(form.contact_number)) e.contact_number = "Enter a valid phone number.";
+      if (form.year_level && (form.year_level < 1 || form.year_level > 10)) e.year_level = "Year level must be between 1 and 10.";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
 
   const [form, setForm] = useState({
     email: "", password: randomPassword(), fullName: "", role: "student" as "admin"|"teacher"|"student", status: "active" as "active"|"inactive",
@@ -190,10 +219,18 @@ function UsersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Label>Full name</Label><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></div>
-                <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="sm:col-span-2">
+                  <Label>Full name<RequiredMark /></Label>
+                  <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} className={cn(errors.fullName && invalidInputClass)} />
+                  <FieldError message={errors.fullName} />
+                </div>
                 <div>
-                  <Label>Role</Label>
+                  <Label>Email<RequiredMark /></Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={cn(errors.email && invalidInputClass)} />
+                  <FieldError message={errors.email} />
+                </div>
+                <div>
+                  <Label>Role<RequiredMark /></Label>
                   <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -204,7 +241,7 @@ function UsersPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Status</Label>
+                  <Label>Status<RequiredMark /></Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -213,19 +250,28 @@ function UsersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Temporary password</Label>
+                <div className="sm:col-span-2">
+                  <Label>Temporary password<RequiredMark /></Label>
                   <div className="flex gap-2">
-                    <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <Input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={cn(errors.password && invalidInputClass)} />
                     <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, password: randomPassword() })}>Generate</Button>
                   </div>
+                  <FieldError message={errors.password} />
                 </div>
 
                 {form.role === "student" && <>
                   <div><Label>Student ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input placeholder="Auto-generated, e.g. STU-2026-0001" value={form.student_no} onChange={(e) => setForm({ ...form, student_no: e.target.value })} /></div>
                   <div><Label>Program</Label><Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} /></div>
-                  <div><Label>Year level</Label><Input type="number" value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} /></div>
-                  <div><Label>Contact #</Label><Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} /></div>
+                  <div>
+                    <Label>Year level</Label>
+                    <Input type="number" min={1} max={10} value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} className={cn(errors.year_level && invalidInputClass)} />
+                    <FieldError message={errors.year_level} />
+                  </div>
+                  <div>
+                    <Label>Contact #</Label>
+                    <Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} className={cn(errors.contact_number && invalidInputClass)} />
+                    <FieldError message={errors.contact_number} />
+                  </div>
                   <div className="sm:col-span-2"><Label>Parent contact #</Label><Input value={form.parent_contact} onChange={(e) => setForm({ ...form, parent_contact: e.target.value })} /></div>
                 </>}
                 {form.role === "teacher" && <>
@@ -236,10 +282,11 @@ function UsersPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => createUser.mutate()} disabled={!form.email || !form.fullName || createUser.isPending}>
+                <Button onClick={() => { if (validateForm()) createUser.mutate(); }} disabled={createUser.isPending}>
                   {createUser.isPending ? "Creating…" : "Create"}
                 </Button>
               </DialogFooter>
+
             </DialogContent>
           </Dialog>
         }
@@ -283,7 +330,7 @@ function UsersPage() {
               <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No users match your filters.</TableCell></TableRow>
-            ) : filtered.map((u) => (
+            ) : pageRows.map((u) => (
               <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : ""}>
                 <TableCell className="font-medium">
                   {u.full_name || "—"}
@@ -326,6 +373,26 @@ function UsersPage() {
           </TableBody>
         </Table>
       </div>
+
+      {filtered.length > 0 && (
+        <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <p className="text-xs text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}</span>–
+            <span className="font-medium text-foreground">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{" "}
+            <span className="font-medium text-foreground">{filtered.length}</span> accounts
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              <ChevronLeft className="mr-1 h-4 w-4" />Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">Page <span className="font-medium text-foreground">{page}</span> of <span className="font-medium text-foreground">{totalPages}</span></span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              Next<ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       <AlertDialog open={!!confirmDeactivate} onOpenChange={(v) => !v && setConfirmDeactivate(null)}>
         <AlertDialogContent>

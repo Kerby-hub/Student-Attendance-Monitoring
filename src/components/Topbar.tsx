@@ -145,6 +145,12 @@ export function Topbar({ portal = "Admin" }: { portal?: string }) {
             <DropdownMenuItem asChild>
               <Link to={"/dashboard" as any}><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
             </DropdownMenuItem>
+            {roles.includes("student") && (
+              <DropdownMenuItem asChild>
+                <Link to={"/student/profile" as any}><UserIcon className="mr-2 h-4 w-4" />Profile</Link>
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuItem asChild>
               <Link to={"/change-password" as any}><KeyRound className="mr-2 h-4 w-4" />Change password</Link>
             </DropdownMenuItem>

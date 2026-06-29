@@ -17,7 +17,19 @@ export const Route = createFileRoute("/admin/")({
   component: AdminDashboardPage,
 });
 
-const PIE_COLORS = ["oklch(0.69 0.17 162)", "oklch(0.78 0.17 70)", "oklch(0.58 0.22 27)"];
+const PIE_COLORS = ["var(--success)", "var(--warning)", "var(--destructive)"];
+
+const CHART_TOOLTIP_STYLE = {
+  borderRadius: 8,
+  border: "1px solid var(--border)",
+  background: "var(--popover)",
+  color: "var(--popover-foreground)",
+  boxShadow: "var(--shadow-card)",
+  fontSize: 12,
+} as const;
+const CHART_TOOLTIP_LABEL = { color: "var(--foreground)", fontWeight: 600 } as const;
+const CHART_TOOLTIP_ITEM = { color: "var(--popover-foreground)" } as const;
+
 
 const COUNTS = [
   { key: "teachers", label: "Teachers", icon: Users, to: "/admin/teachers" },
@@ -253,11 +265,11 @@ function AdminDashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} cursor={{ fill: "var(--accent)", opacity: 0.25 }} />
                 <Legend />
-                <Line type="monotone" dataKey="present" stroke="#16a34a" strokeWidth={2} />
-                <Line type="monotone" dataKey="late" stroke="#eab308" strokeWidth={2} />
-                <Line type="monotone" dataKey="absent" stroke="#dc2626" strokeWidth={2} />
+                <Line type="monotone" dataKey="present" stroke="var(--success)" strokeWidth={2} />
+                <Line type="monotone" dataKey="late" stroke="var(--warning)" strokeWidth={2} />
+                <Line type="monotone" dataKey="absent" stroke="var(--destructive)" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
@@ -271,11 +283,11 @@ function AdminDashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} cursor={{ fill: "var(--accent)", opacity: 0.25 }} />
                 <Legend />
-                <Bar dataKey="present" stackId="a" fill="#16a34a" />
-                <Bar dataKey="late" stackId="a" fill="#eab308" />
-                <Bar dataKey="absent" stackId="a" fill="#dc2626" />
+                <Bar dataKey="present" stackId="a" fill="var(--success)" />
+                <Bar dataKey="late" stackId="a" fill="var(--warning)" />
+                <Bar dataKey="absent" stackId="a" fill="var(--destructive)" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -294,8 +306,8 @@ function AdminDashboardPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis type="number" domain={[0, 100]} className="text-xs" />
                   <YAxis dataKey="name" type="category" className="text-xs" width={70} />
-                  <Tooltip formatter={(v) => `${v}%`} contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
-                  <Bar dataKey="rate" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+                  <Tooltip formatter={(v) => `${v}%`} contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} cursor={{ fill: "var(--accent)", opacity: 0.25 }} />
+                  <Bar dataKey="rate" fill="var(--primary)" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -313,7 +325,7 @@ function AdminDashboardPage() {
                   <Pie data={distribution} dataKey="value" nameKey="name" outerRadius={80} label>
                     {distribution.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -333,8 +345,8 @@ function AdminDashboardPage() {
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis className="text-xs" />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }} />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={CHART_TOOLTIP_LABEL} itemStyle={CHART_TOOLTIP_ITEM} cursor={{ fill: "var(--accent)", opacity: 0.25 }} />
+                <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

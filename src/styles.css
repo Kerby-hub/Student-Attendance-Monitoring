@@ -93,13 +93,14 @@
   --input: oklch(0.94 0.012 250);
   --ring: oklch(0.55 0.22 264);
 
-  /* Sidebar tokens — deep navy */
-  --sidebar: oklch(0.20 0.04 260);
-  --sidebar-foreground: oklch(0.92 0.012 250);
-  --sidebar-accent: oklch(0.27 0.06 260);
-  --sidebar-accent-foreground: oklch(0.99 0.005 250);
-  --sidebar-border: oklch(0.30 0.05 260);
+  /* Sidebar tokens — clean white in light mode */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.30 0.04 260);
+  --sidebar-accent: oklch(0.965 0.012 250);
+  --sidebar-accent-foreground: oklch(0.20 0.04 260);
+  --sidebar-border: oklch(0.92 0.012 250);
   --sidebar-ring: oklch(0.55 0.22 264);
+
 
   /* Gradients & shadows */
   --gradient-hero: linear-gradient(135deg, oklch(0.20 0.04 260) 0%, oklch(0.34 0.12 264) 100%);

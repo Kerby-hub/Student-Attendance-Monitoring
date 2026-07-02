@@ -118,18 +118,18 @@ function AttendanceSessionPage() {
       setSession((s) => s ? { ...s, qr_token: token, status: "open" } : s);
       const png = await QRCode.toDataURL(token, { width: 360, margin: 2 });
       setQrDataUrl(png);
-      setSecsLeft(15);
+      setSecsLeft(rotationSecs);
       setTick((t) => t + 1);
     };
     rotate();
-    intervalRef.current = setInterval(rotate, 15000);
+    intervalRef.current = setInterval(rotate, rotationSecs * 1000);
     const countdown = setInterval(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       clearInterval(countdown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status]);
+  }, [session?.id, session?.status, rotationSecs]);
 
   const startSession = async () => {
     const { data: existing } = await supabase

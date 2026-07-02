@@ -90,9 +90,13 @@ function SettingsPage() {
           <Card className="max-w-xl shadow-[var(--shadow-card)]">
             <CardHeader><CardTitle>Attendance</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div><Label>QR rotation interval (seconds)</Label><Input type="number" value={qr} onChange={(e) => setQr(Number(e.target.value))} /></div>
-              <div><Label>Late grace period (minutes)</Label><Input type="number" value={grace} onChange={(e) => setGrace(Number(e.target.value))} /></div>
-              <div><Label>Default geofence radius (meters)</Label><Input type="number" value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></div>
+              <div>
+                <Label>QR rotation interval (seconds)</Label>
+                <Input type="number" min={5} max={300} value={qr} onChange={(e) => setQr(Number(e.target.value))} />
+                <p className="mt-1 text-xs text-muted-foreground">Between 5 and 300 seconds. Applied to newly started attendance sessions.</p>
+              </div>
+              <div><Label>Late grace period (minutes)</Label><Input type="number" min={0} max={240} value={grace} onChange={(e) => setGrace(Number(e.target.value))} /></div>
+              <div><Label>Default geofence radius (meters)</Label><Input type="number" min={5} max={10000} value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></div>
             </CardContent>
           </Card>
 

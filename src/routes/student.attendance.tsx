@@ -198,6 +198,7 @@ function StudentScanner() {
         _qr_token: token,
         _lat: pos.coords.latitude,
         _lng: pos.coords.longitude,
+        _accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
       });
       if (error) {
         setResult({ kind: "error", code: "unknown", message: error.message });

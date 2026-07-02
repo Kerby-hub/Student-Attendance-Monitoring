@@ -947,7 +947,12 @@ export type Database = {
       process_expired_sessions: { Args: never; Returns: Json }
       rotate_session_qr: { Args: { _session_id: string }; Returns: string }
       student_check_in: {
-        Args: { _lat: number; _lng: number; _qr_token: string }
+        Args: {
+          _accuracy?: number
+          _lat: number
+          _lng: number
+          _qr_token: string
+        }
         Returns: Json
       }
     }

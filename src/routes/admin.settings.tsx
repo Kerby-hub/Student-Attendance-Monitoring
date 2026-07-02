@@ -50,6 +50,18 @@ function SettingsPage() {
   }, []);
 
   const save = async () => {
+    if (!Number.isFinite(qr) || qr < 5 || qr > 300) {
+      toast.error("QR rotation interval must be between 5 and 300 seconds.");
+      return;
+    }
+    if (!Number.isFinite(grace) || grace < 0 || grace > 240) {
+      toast.error("Late grace period must be between 0 and 240 minutes.");
+      return;
+    }
+    if (!Number.isFinite(radius) || radius < 5 || radius > 10000) {
+      toast.error("Default geofence radius must be between 5 and 10,000 meters.");
+      return;
+    }
     const updates: Array<{ key: string; value: any }> = [
       { key: "qr_rotation_seconds", value: qr },
       { key: "late_grace_minutes", value: grace },
@@ -58,9 +70,15 @@ function SettingsPage() {
       { key: "email_provider", value: emailProvider },
     ];
     for (const u of updates) {
-      await (supabase as any).from("system_settings").upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() });
+      const { error } = await (supabase as any)
+        .from("system_settings")
+        .upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      if (error) {
+        toast.error(`Failed to save ${u.key}: ${error.message}`);
+        return;
+      }
     }
-    toast.success("Settings saved");
+    toast.success("Settings saved. New attendance sessions will use the updated QR rotation interval.");
   };
 
 

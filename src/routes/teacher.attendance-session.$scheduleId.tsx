@@ -22,8 +22,26 @@ function AttendanceSessionPage() {
   const [session, setSession] = useState<Session | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [tick, setTick] = useState(0);
+  const [rotationSecs, setRotationSecs] = useState<number>(15);
   const [secsLeft, setSecsLeft] = useState(15);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Load QR rotation interval from system_settings (fallback 15s).
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("system_settings")
+        .select("value")
+        .eq("key", "qr_rotation_seconds")
+        .maybeSingle();
+      const raw = (data as { value: unknown } | null)?.value;
+      const parsed = typeof raw === "number" ? raw : Number(raw);
+      if (Number.isFinite(parsed) && parsed >= 5 && parsed <= 300) {
+        setRotationSecs(parsed);
+        setSecsLeft(parsed);
+      }
+    })();
+  }, []);
 
   // Load schedule meta
   const { data: schedule } = useQuery({
@@ -100,18 +118,18 @@ function AttendanceSessionPage() {
       setSession((s) => s ? { ...s, qr_token: token, status: "open" } : s);
       const png = await QRCode.toDataURL(token, { width: 360, margin: 2 });
       setQrDataUrl(png);
-      setSecsLeft(15);
+      setSecsLeft(rotationSecs);
       setTick((t) => t + 1);
     };
     rotate();
-    intervalRef.current = setInterval(rotate, 15000);
+    intervalRef.current = setInterval(rotate, rotationSecs * 1000);
     const countdown = setInterval(() => setSecsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       clearInterval(countdown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status]);
+  }, [session?.id, session?.status, rotationSecs]);
 
   const startSession = async () => {
     const { data: existing } = await supabase

@@ -50,6 +50,18 @@ function SettingsPage() {
   }, []);
 
   const save = async () => {
+    if (!Number.isFinite(qr) || qr < 5 || qr > 300) {
+      toast.error("QR rotation interval must be between 5 and 300 seconds.");
+      return;
+    }
+    if (!Number.isFinite(grace) || grace < 0 || grace > 240) {
+      toast.error("Late grace period must be between 0 and 240 minutes.");
+      return;
+    }
+    if (!Number.isFinite(radius) || radius < 5 || radius > 10000) {
+      toast.error("Default geofence radius must be between 5 and 10,000 meters.");
+      return;
+    }
     const updates: Array<{ key: string; value: any }> = [
       { key: "qr_rotation_seconds", value: qr },
       { key: "late_grace_minutes", value: grace },
@@ -58,9 +70,15 @@ function SettingsPage() {
       { key: "email_provider", value: emailProvider },
     ];
     for (const u of updates) {
-      await (supabase as any).from("system_settings").upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() });
+      const { error } = await (supabase as any)
+        .from("system_settings")
+        .upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      if (error) {
+        toast.error(`Failed to save ${u.key}: ${error.message}`);
+        return;
+      }
     }
-    toast.success("Settings saved");
+    toast.success("Settings saved. New attendance sessions will use the updated QR rotation interval.");
   };
 
 
@@ -72,9 +90,13 @@ function SettingsPage() {
           <Card className="max-w-xl shadow-[var(--shadow-card)]">
             <CardHeader><CardTitle>Attendance</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div><Label>QR rotation interval (seconds)</Label><Input type="number" value={qr} onChange={(e) => setQr(Number(e.target.value))} /></div>
-              <div><Label>Late grace period (minutes)</Label><Input type="number" value={grace} onChange={(e) => setGrace(Number(e.target.value))} /></div>
-              <div><Label>Default geofence radius (meters)</Label><Input type="number" value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></div>
+              <div>
+                <Label>QR rotation interval (seconds)</Label>
+                <Input type="number" min={5} max={300} value={qr} onChange={(e) => setQr(Number(e.target.value))} />
+                <p className="mt-1 text-xs text-muted-foreground">Between 5 and 300 seconds. Applied to newly started attendance sessions.</p>
+              </div>
+              <div><Label>Late grace period (minutes)</Label><Input type="number" min={0} max={240} value={grace} onChange={(e) => setGrace(Number(e.target.value))} /></div>
+              <div><Label>Default geofence radius (meters)</Label><Input type="number" min={5} max={10000} value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></div>
             </CardContent>
           </Card>
 

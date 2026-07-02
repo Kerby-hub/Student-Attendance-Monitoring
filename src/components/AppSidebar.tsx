@@ -13,7 +13,7 @@ import {
   Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { CollapsibleNavGroup, type NavGroup } from "@/components/CollapsibleNavGroup";
+import { CollapsibleNavGroup, SidebarAccordion, type NavGroup } from "@/components/CollapsibleNavGroup";
 
 const groups: NavGroup[] = [
   {
@@ -89,13 +89,15 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="bg-sidebar scrollbar-thin">
-        {groups.map((g) => (
-          <CollapsibleNavGroup
-            key={g.label}
-            group={g}
-            storageKey={`sams.sidebar.admin.${g.label}`}
-          />
-        ))}
+        <SidebarAccordion storageKey="sams.sidebar.admin.openGroup">
+          {groups.map((g) => (
+            <CollapsibleNavGroup
+              key={g.label}
+              group={g}
+              storageKey={g.label}
+            />
+          ))}
+        </SidebarAccordion>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3">

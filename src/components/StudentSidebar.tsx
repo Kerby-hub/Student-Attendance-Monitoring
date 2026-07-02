@@ -8,7 +8,7 @@ import {
   Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { CollapsibleNavGroup, type NavGroup } from "@/components/CollapsibleNavGroup";
+import { CollapsibleNavGroup, SidebarAccordion, type NavGroup } from "@/components/CollapsibleNavGroup";
 
 const groups: NavGroup[] = [
   {

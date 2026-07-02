@@ -55,13 +55,15 @@ export function StudentSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="bg-sidebar scrollbar-thin">
-        {groups.map((g) => (
-          <CollapsibleNavGroup
-            key={g.label}
-            group={g}
-            storageKey={`sams.sidebar.student.${g.label}`}
-          />
-        ))}
+        <SidebarAccordion storageKey="sams.sidebar.student.openGroup">
+          {groups.map((g) => (
+            <CollapsibleNavGroup
+              key={g.label}
+              group={g}
+              storageKey={g.label}
+            />
+          ))}
+        </SidebarAccordion>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3">

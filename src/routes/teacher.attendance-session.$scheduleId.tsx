@@ -118,9 +118,36 @@ function AttendanceSessionPage() {
   const checkedInIds = new Set(roster.map((r) => r.students?.id ?? r.student_id));
   const missing = sectionStudents.filter((s) => !checkedInIds.has(s.id));
 
+  // Auto-detect scheduled end time and close the session when reached.
+  useEffect(() => {
+    if (!schedule?.end_time) return;
+    const end = scheduleEndDate(schedule.end_time, session?.opened_at ?? null);
+    if (!end) return;
+    const check = async () => {
+      if (Date.now() < end.getTime()) return;
+      setSessionEnded(true);
+      if (session && session.status === "open") {
+        await supabase.from("attendance_sessions")
+          .update({ status: "closed", closed_at: new Date().toISOString() })
+          .eq("id", session.id);
+        if (missing.length > 0) {
+          await supabase.from("attendance_records").insert(
+            missing.map((s) => ({ session_id: session.id, student_id: s.id, status: "absent" }))
+          );
+        }
+        setSession((s) => (s ? { ...s, status: "closed", closed_at: new Date().toISOString() } : s));
+        toast.info("Session ended", { description: "Scheduled end time reached. Check-in is now closed." });
+      }
+    };
+    check();
+    const t = setInterval(check, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedule?.end_time, session?.id, session?.status, session?.opened_at, missing.length]);
+
   // QR rotation
   useEffect(() => {
-    if (!session || session.status !== "open") return;
+    if (!session || session.status !== "open" || sessionEnded) return;
     const rotate = async () => {
       const { data, error } = await (supabase as any).rpc("rotate_session_qr", { _session_id: session.id });
       if (error) { toast.error(error.message); return; }
@@ -139,9 +166,15 @@ function AttendanceSessionPage() {
       clearInterval(countdown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status, rotationSecs]);
+  }, [session?.id, session?.status, rotationSecs, sessionEnded]);
 
   const startSession = async () => {
+    // Refuse to start a session that is already past its scheduled end.
+    const end = scheduleEndDate(schedule?.end_time, null);
+    if (end && Date.now() > end.getTime()) {
+      toast.error("Cannot start session — scheduled end time has already passed.");
+      return;
+    }
     const { data: existing } = await supabase
       .from("attendance_sessions").select("*").eq("schedule_id", scheduleId).in("status", ["waiting","open"]).maybeSingle();
     if (existing) { setSession(existing as Session); return; }

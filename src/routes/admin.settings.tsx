@@ -187,7 +187,7 @@ function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Button onClick={save}>Save settings</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save settings"}</Button>
 
         </>
       )}

@@ -14,7 +14,16 @@ export const Route = createFileRoute("/teacher/attendance-session/$scheduleId")(
   component: AttendanceSessionPage,
 });
 
-type Session = { id: string; schedule_id: string; status: string; qr_token: string | null; opened_at: string | null; closed_at: string | null };
+type Session = { id: string; schedule_id: string; status: string; qr_token: string | null; opened_at: string | null; closed_at: string | null; expires_at?: string | null };
+
+function scheduleEndDate(endTime?: string | null, openedAt?: string | null): Date | null {
+  if (!endTime) return null;
+  const base = openedAt ? new Date(openedAt) : new Date();
+  const [h, m, s] = endTime.split(":").map(Number);
+  const d = new Date(base);
+  d.setHours(h ?? 0, m ?? 0, s ?? 0, 0);
+  return d;
+}
 
 function AttendanceSessionPage() {
   const { scheduleId } = Route.useParams();
@@ -24,6 +33,7 @@ function AttendanceSessionPage() {
   const [tick, setTick] = useState(0);
   const [rotationSecs, setRotationSecs] = useState<number>(15);
   const [secsLeft, setSecsLeft] = useState(15);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load QR rotation interval from system_settings (fallback 15s).

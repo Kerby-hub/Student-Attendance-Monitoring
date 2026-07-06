@@ -211,21 +211,29 @@ function AttendanceSessionPage() {
       <PageHeader
         title={schedule ? `${schedule.subjects?.code} — ${schedule.subjects?.name}` : "Attendance session"}
         description={schedule ? `Section ${schedule.sections?.name} • Room ${schedule.room ?? "TBA"} • ${schedule.start_time?.slice(0,5)}–${schedule.end_time?.slice(0,5)}` : ""}
-        action={session?.status === "open"
+        action={session?.status === "open" && !sessionEnded
           ? <Button variant="destructive" onClick={closeSession}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
-          : <Button onClick={startSession}>Start session</Button>}
+          : <Button onClick={startSession} disabled={sessionEnded || session?.status === "closed"}>Start session</Button>}
       />
+
+      {sessionEnded && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <p className="font-semibold">Check-in closed</p>
+          <p className="text-muted-foreground">This attendance session has ended. Students can no longer check in.</p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
         <Card className="shadow-[var(--shadow-elegant)]">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               QR code
-              {session?.status === "open" && <Badge className="bg-success text-success-foreground">Live</Badge>}
+              {session?.status === "open" && !sessionEnded && <Badge className="bg-success text-success-foreground">Live</Badge>}
+              {(sessionEnded || session?.status === "closed") && <Badge variant="secondary">Closed</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {session?.status === "open" && qrDataUrl ? (
+            {session?.status === "open" && !sessionEnded && qrDataUrl ? (
               <div className="space-y-3 text-center">
                 <img src={qrDataUrl} alt="Attendance QR" className="rounded-lg border bg-white p-4" width={360} height={360} />
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -234,8 +242,10 @@ function AttendanceSessionPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid h-[360px] w-[360px] place-items-center rounded-lg border-2 border-dashed text-muted-foreground">
-                {session ? "Generating…" : "Press Start session to begin."}
+              <div className="grid h-[360px] w-[360px] place-items-center rounded-lg border-2 border-dashed p-6 text-center text-muted-foreground">
+                {sessionEnded || session?.status === "closed"
+                  ? "Session ended. QR rotation has stopped."
+                  : session ? "Generating…" : "Press Start session to begin."}
               </div>
             )}
           </CardContent>

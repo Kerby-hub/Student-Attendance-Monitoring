@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/settings")({
   component: SettingsPage,
@@ -32,6 +34,9 @@ function SettingsPage() {
   const [smsProvider, setSmsProvider] = useState<SmsProvider>("stub");
   const [emailProvider, setEmailProvider] = useState<EmailProvider>("stub");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   useEffect(() => {
     (async () => {
@@ -50,18 +55,14 @@ function SettingsPage() {
   }, []);
 
   const save = async () => {
-    if (!Number.isFinite(qr) || qr < 5 || qr > 300) {
-      toast.error("QR rotation interval must be between 5 and 300 seconds.");
-      return;
-    }
-    if (!Number.isFinite(grace) || grace < 0 || grace > 240) {
-      toast.error("Late grace period must be between 0 and 240 minutes.");
-      return;
-    }
-    if (!Number.isFinite(radius) || radius < 5 || radius > 10000) {
-      toast.error("Default geofence radius must be between 5 and 10,000 meters.");
-      return;
-    }
+    if (saving) return;
+    const errs: Record<string, string> = {};
+    if (!Number.isFinite(qr) || qr < 5 || qr > 300) errs.qr = "QR rotation interval must be between 5 and 300 seconds.";
+    if (!Number.isFinite(grace) || grace < 0 || grace > 240) errs.grace = "Late grace period must be between 0 and 240 minutes.";
+    if (!Number.isFinite(radius) || radius < 5 || radius > 10000) errs.radius = "Default geofence radius must be between 5 and 10,000 meters.";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+    setSaving(true);
     const updates: Array<{ key: string; value: any }> = [
       { key: "qr_rotation_seconds", value: qr },
       { key: "late_grace_minutes", value: grace },
@@ -74,10 +75,12 @@ function SettingsPage() {
         .from("system_settings")
         .upsert({ key: u.key, value: u.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
       if (error) {
+        setSaving(false);
         toast.error(`Failed to save ${u.key}: ${error.message}`);
         return;
       }
     }
+    setSaving(false);
     toast.success("Settings saved. New attendance sessions will use the updated QR rotation interval.");
   };
 
@@ -91,12 +94,30 @@ function SettingsPage() {
             <CardHeader><CardTitle>Attendance</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>QR rotation interval (seconds)</Label>
-                <Input type="number" min={5} max={300} value={qr} onChange={(e) => setQr(Number(e.target.value))} />
+                <Label>QR rotation interval (seconds)<RequiredMark /></Label>
+                <Input type="number" min={5} max={300} value={qr}
+                  aria-invalid={!!errors.qr} aria-describedby={errors.qr ? "err-qr" : undefined}
+                  className={cn(errors.qr && invalidInputClass)}
+                  onChange={(e) => { setQr(Number(e.target.value)); clearErr("qr"); }} />
                 <p className="mt-1 text-xs text-muted-foreground">Between 5 and 300 seconds. Applied to newly started attendance sessions.</p>
+                <div id="err-qr"><FieldError message={errors.qr} /></div>
               </div>
-              <div><Label>Late grace period (minutes)</Label><Input type="number" min={0} max={240} value={grace} onChange={(e) => setGrace(Number(e.target.value))} /></div>
-              <div><Label>Default geofence radius (meters)</Label><Input type="number" min={5} max={10000} value={radius} onChange={(e) => setRadius(Number(e.target.value))} /></div>
+              <div>
+                <Label>Late grace period (minutes)<RequiredMark /></Label>
+                <Input type="number" min={0} max={240} value={grace}
+                  aria-invalid={!!errors.grace} aria-describedby={errors.grace ? "err-grace" : undefined}
+                  className={cn(errors.grace && invalidInputClass)}
+                  onChange={(e) => { setGrace(Number(e.target.value)); clearErr("grace"); }} />
+                <div id="err-grace"><FieldError message={errors.grace} /></div>
+              </div>
+              <div>
+                <Label>Default geofence radius (meters)<RequiredMark /></Label>
+                <Input type="number" min={5} max={10000} value={radius}
+                  aria-invalid={!!errors.radius} aria-describedby={errors.radius ? "err-radius" : undefined}
+                  className={cn(errors.radius && invalidInputClass)}
+                  onChange={(e) => { setRadius(Number(e.target.value)); clearErr("radius"); }} />
+                <div id="err-radius"><FieldError message={errors.radius} /></div>
+              </div>
             </CardContent>
           </Card>
 
@@ -166,7 +187,7 @@ function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Button onClick={save}>Save settings</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save settings"}</Button>
 
         </>
       )}

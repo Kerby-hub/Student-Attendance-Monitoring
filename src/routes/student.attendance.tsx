@@ -36,6 +36,7 @@ const ERROR_TITLES: Record<string, string> = {
   duplicate: "Already checked in",
   no_student: "Student record not found",
   no_session: "Session is closed",
+  session_ended: "Check-in closed",
   geo_denied: "Location permission denied",
   geo_unavailable: "Location unavailable",
   camera_denied: "Camera permission denied",

@@ -43,6 +43,14 @@ type Student = {
   status: "active" | "inactive" | "graduated" | "archived";
   user_id: string | null;
   profile_picture_url: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_phone: string | null;
+  guardian_email: string | null;
+  home_address: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
   sections?: { name: string } | null;
 };
 
@@ -52,11 +60,27 @@ const STATUS_VARIANTS: Record<Student["status"], "default" | "secondary" | "dest
   active: "default", inactive: "secondary", graduated: "outline", archived: "destructive",
 };
 
+const GUARDIAN_RELATIONSHIPS = ["Mother", "Father", "Legal Guardian", "Grandparent", "Other"];
+
 function genStudentNo() {
   const y = new Date().getFullYear().toString().slice(-2);
   const r = Math.floor(1000 + Math.random() * 9000);
   return `S${y}-${r}`;
 }
+
+/** Normalize PH mobile → +639XXXXXXXXX or null when invalid. */
+function normalizePhPhone(input: string): string | null {
+  if (!input) return null;
+  const digits = input.replace(/[^\d]/g, "");
+  if (/^639\d{9}$/.test(digits)) return `+${digits}`;
+  if (/^09\d{9}$/.test(digits)) return `+63${digits.slice(1)}`;
+  if (/^9\d{9}$/.test(digits)) return `+63${digits}`;
+  return null;
+}
+
+const Req = () => <span className="text-destructive"> *</span>;
+const FieldError = ({ msg }: { msg?: string }) =>
+  msg ? <p className="mt-1 text-xs text-destructive">{msg}</p> : null;
 
 function StudentsPage() {
   const qc = useQueryClient();
@@ -73,8 +97,13 @@ function StudentsPage() {
     email: "", contact_number: "", program: "", year_level: "1",
     section_id: "" as string,
     temp_password: "",
+    guardian_name: "", guardian_relationship: "", guardian_phone: "",
+    guardian_email: "", home_address: "",
+    emergency_contact_name: "", emergency_contact_phone: "", emergency_contact_relationship: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
   const setStatusFn = useServerFn(adminSetStatus);

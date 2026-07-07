@@ -113,7 +113,7 @@ function NotificationsPage() {
       />
 
       <Card className="mb-4 shadow-[var(--shadow-card)]"><CardContent className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div><Label>From</Label><Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} /></div>
           <div><Label>To</Label><Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} max={today} /></div>
           <div>
@@ -126,6 +126,18 @@ function NotificationsPage() {
                 <SelectItem value="failed">Failed</SelectItem>
                 <SelectItem value="stubbed">Stubbed</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Select value={notifType} onValueChange={(v) => { setNotifType(v); setPage(0); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="late">Late</SelectItem>
+                <SelectItem value="absence">Absence</SelectItem>
+                <SelectItem value="announcement">Announcement</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -152,25 +164,34 @@ function NotificationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>When</TableHead><TableHead>Phone</TableHead>
-              <TableHead>Message</TableHead><TableHead>Status</TableHead>
-              <TableHead>Source</TableHead><TableHead className="text-right">Actions</TableHead>
+              <TableHead>When</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Guardian</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Message</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Error</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+              <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 <MessageSquare className="mx-auto mb-2 h-8 w-8 opacity-40" />No SMS logs match the filter.
               </TableCell></TableRow>
             ) : rows.map((l) => (
               <TableRow key={l.id}>
                 <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-sm">{l.students?.full_name ?? "—"}</TableCell>
+                <TableCell className="text-sm">{l.students?.guardian_name ?? "—"}</TableCell>
                 <TableCell className="font-mono text-sm">{l.phone}</TableCell>
-                <TableCell className="max-w-[420px] text-sm"><span className="line-clamp-2">{l.message}</span></TableCell>
+                <TableCell>{l.notification_type ? <Badge variant="outline" className="capitalize">{l.notification_type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell className="max-w-[340px] text-sm"><span className="line-clamp-2">{l.message}</span></TableCell>
                 <TableCell><Badge variant={statusVariant(l.status)}>{l.status}</Badge></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{l.broadcast_id ? "Broadcast" : "Auto"}</TableCell>
+                <TableCell className="max-w-[200px] text-xs text-destructive"><span className="line-clamp-2">{l.error_message ?? ""}</span></TableCell>
                 <TableCell className="text-right">
                   {l.status === "failed" && (
                     <Button size="sm" variant="ghost" onClick={() => retry.mutate(l)} disabled={retry.isPending}>
@@ -183,6 +204,7 @@ function NotificationsPage() {
           </TableBody>
         </Table>
       </div>
+
 
       <div className="mt-3 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Page {page + 1} of {pages}</span>

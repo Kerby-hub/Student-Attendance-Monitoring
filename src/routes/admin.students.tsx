@@ -157,13 +157,50 @@ function StudentsPage() {
     });
   }, [students, search, filterProgram, filterYear, filterSection, filterStatus]);
 
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.student_no.trim()) e.student_no = "Student ID is required.";
+    if (!form.first_name.trim()) e.first_name = "First name is required.";
+    if (!form.last_name.trim()) e.last_name = "Last name is required.";
+    if (!editing && !form.email.trim()) e.email = "Email is required for a login account.";
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      e.email = "Invalid email address.";
+    if (!form.guardian_name.trim()) e.guardian_name = "Guardian name is required.";
+    if (!form.guardian_relationship) e.guardian_relationship = "Please select a relationship.";
+    if (!form.guardian_phone.trim()) e.guardian_phone = "Guardian mobile number is required.";
+    else if (!normalizePhPhone(form.guardian_phone))
+      e.guardian_phone = "Invalid PH mobile number (e.g. 09171234567 or +639171234567).";
+    if (form.guardian_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.guardian_email.trim()))
+      e.guardian_email = "Invalid guardian email.";
+    if (form.emergency_contact_phone.trim() && !normalizePhPhone(form.emergency_contact_phone))
+      e.emergency_contact_phone = "Invalid PH mobile number.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error("Please fix the highlighted fields.");
       const first = form.first_name.trim();
       const last = form.last_name.trim();
       const mid = form.middle_name.trim();
       const full = [first, mid, last].filter(Boolean).join(" ");
       const email = form.email.trim();
+      const guardianPhone = normalizePhPhone(form.guardian_phone) ?? form.guardian_phone.trim();
+      const emergencyPhone = form.emergency_contact_phone.trim()
+        ? (normalizePhPhone(form.emergency_contact_phone) ?? form.emergency_contact_phone.trim())
+        : null;
+
+      const guardianPayload = {
+        guardian_name: form.guardian_name.trim() || null,
+        guardian_relationship: form.guardian_relationship || null,
+        guardian_phone: guardianPhone || null,
+        guardian_email: form.guardian_email.trim() || null,
+        home_address: form.home_address.trim() || null,
+        emergency_contact_name: form.emergency_contact_name.trim() || null,
+        emergency_contact_phone: emergencyPhone,
+        emergency_contact_relationship: form.emergency_contact_relationship.trim() || null,
+      };
 
       if (editing) {
         const payload = {
@@ -177,11 +214,10 @@ function StudentsPage() {
           program: form.program || null,
           year_level: form.year_level ? parseInt(form.year_level, 10) : null,
           section_id: form.section_id || null,
+          ...guardianPayload,
         };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
         if (error) throw error;
-        // Keep profiles + auth metadata in sync so Teacher/Student dashboards,
-        // Topbar, and AuthContext show the updated name everywhere.
         if (editing.user_id) {
           try {
             await updateProfileFn({
@@ -191,7 +227,7 @@ function StudentsPage() {
                 email: email || undefined,
               },
             });
-          } catch { /* non-fatal: student row already updated */ }
+          } catch { /* non-fatal */ }
         }
         return null;
       }
@@ -217,12 +253,12 @@ function StudentsPage() {
         },
       });
 
-      // Save first/middle/last on the student row (adminCreateUser only sets full_name)
       if (res?.userId) {
         await supabase.from("students").update({
           first_name: first || null,
           last_name: last || null,
           middle_name: mid || null,
+          ...guardianPayload,
         }).eq("user_id", res.userId);
       }
       return { email, password };
@@ -230,7 +266,7 @@ function StudentsPage() {
     onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
       invalidateUserCaches(qc);
-      setOpen(false); setEditing(null); setForm(emptyForm);
+      setOpen(false); setEditing(null); setForm(emptyForm); setErrors({});
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
@@ -251,11 +287,10 @@ function StudentsPage() {
     mutationFn: async ({ id, status, userId }: { id: string; status: Student["status"]; userId: string | null }) => {
       const { error } = await supabase.from("students").update({ status }).eq("id", id);
       if (error) throw error;
-      // Mirror to profile/auth so the user can/can't log in and other modules update.
       if (userId) {
         try {
           await setStatusFn({ data: { userId, status: status === "active" ? "active" : "inactive" } });
-        } catch { /* non-fatal: student row already updated */ }
+        } catch { /* non-fatal */ }
       }
     },
     onSuccess: (_d, v) => {
@@ -267,11 +302,13 @@ function StudentsPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setErrors({});
     setForm({ ...emptyForm, student_no: genStudentNo(), temp_password: generateTempPassword() });
     setOpen(true);
   };
   const openEdit = (s: Student) => {
     setEditing(s);
+    setErrors({});
     setForm({
       student_no: s.student_no,
       first_name: s.first_name ?? "",
@@ -283,9 +320,18 @@ function StudentsPage() {
       year_level: s.year_level ? String(s.year_level) : "",
       section_id: s.section_id ?? "",
       temp_password: "",
+      guardian_name: s.guardian_name ?? "",
+      guardian_relationship: s.guardian_relationship ?? "",
+      guardian_phone: s.guardian_phone ?? "",
+      guardian_email: s.guardian_email ?? "",
+      home_address: s.home_address ?? "",
+      emergency_contact_name: s.emergency_contact_name ?? "",
+      emergency_contact_phone: s.emergency_contact_phone ?? "",
+      emergency_contact_relationship: s.emergency_contact_relationship ?? "",
     });
     setOpen(true);
   };
+
 
   return (
     <div>

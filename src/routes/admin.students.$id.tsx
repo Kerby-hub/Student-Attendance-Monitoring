@@ -85,11 +85,25 @@ function StudentDetailsPage() {
               {student.contact_number && <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{student.contact_number}</p>}
               {student.program && <p className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-muted-foreground" />{student.program} · Year {student.year_level ?? "—"}</p>}
               {student.sections && <p className="flex items-center gap-2"><Layers className="h-4 w-4 text-muted-foreground" />{student.sections.name}</p>}
+              {student.home_address && <p className="text-muted-foreground"><span className="font-medium text-foreground">Address:</span> {student.home_address}</p>}
             </div>
           </CardContent>
         </Card>
 
         <div className="space-y-6 lg:col-span-2">
+          {(student.guardian_name || student.guardian_phone || student.emergency_contact_name) && (
+            <Card>
+              <CardHeader><CardTitle>Parent / Guardian information</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+                {student.guardian_name && <div><p className="text-xs uppercase text-muted-foreground">Guardian</p><p className="font-medium">{student.guardian_name}</p></div>}
+                {student.guardian_relationship && <div><p className="text-xs uppercase text-muted-foreground">Relationship</p><p>{student.guardian_relationship}</p></div>}
+                {student.guardian_phone && <div><p className="text-xs uppercase text-muted-foreground">Guardian mobile</p><p className="font-mono">{student.guardian_phone}</p></div>}
+                {student.guardian_email && <div><p className="text-xs uppercase text-muted-foreground">Guardian email</p><p>{student.guardian_email}</p></div>}
+                {student.emergency_contact_name && <div><p className="text-xs uppercase text-muted-foreground">Emergency contact</p><p>{student.emergency_contact_name}{student.emergency_contact_relationship ? ` (${student.emergency_contact_relationship})` : ""}</p></div>}
+                {student.emergency_contact_phone && <div><p className="text-xs uppercase text-muted-foreground">Emergency mobile</p><p className="font-mono">{student.emergency_contact_phone}</p></div>}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader><CardTitle>Attendance summary</CardTitle></CardHeader>
             <CardContent>

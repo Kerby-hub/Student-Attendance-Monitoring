@@ -343,40 +343,50 @@ function StudentsPage() {
             <DialogTrigger asChild>
               <Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New student</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit student" : "New student"}</DialogTitle>
               </DialogHeader>
+
+              <h4 className="mt-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Student information</h4>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label>Student ID</Label>
+                  <Label>Student ID<Req /></Label>
                   <div className="flex gap-2">
-                    <Input value={form.student_no} onChange={(e) => setForm({ ...form, student_no: e.target.value })} />
+                    <Input value={form.student_no} aria-invalid={!!errors.student_no}
+                      onChange={(e) => { setForm({ ...form, student_no: e.target.value }); clearErr("student_no"); }} />
                     {!editing && (
                       <Button type="button" variant="outline" onClick={() => setForm({ ...form, student_no: genStudentNo() })}>
                         Generate
                       </Button>
                     )}
                   </div>
+                  <FieldError msg={errors.student_no} />
                 </div>
                 <div>
-                  <Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Label>Email{!editing && <Req />}</Label>
+                  <Input type="email" value={form.email} aria-invalid={!!errors.email}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); clearErr("email"); }} />
+                  <FieldError msg={errors.email} />
                 </div>
                 <div>
-                  <Label>First name</Label>
-                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+                  <Label>First name<Req /></Label>
+                  <Input value={form.first_name} aria-invalid={!!errors.first_name}
+                    onChange={(e) => { setForm({ ...form, first_name: e.target.value }); clearErr("first_name"); }} />
+                  <FieldError msg={errors.first_name} />
                 </div>
                 <div>
-                  <Label>Last name</Label>
-                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+                  <Label>Last name<Req /></Label>
+                  <Input value={form.last_name} aria-invalid={!!errors.last_name}
+                    onChange={(e) => { setForm({ ...form, last_name: e.target.value }); clearErr("last_name"); }} />
+                  <FieldError msg={errors.last_name} />
                 </div>
                 <div>
                   <Label>Middle name</Label>
                   <Input value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
                 </div>
                 <div>
-                  <Label>Contact number</Label>
+                  <Label>Student contact number</Label>
                   <Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} placeholder="+63..." />
                 </div>
                 <div>
@@ -402,36 +412,96 @@ function StudentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {!editing && (
-                  <div className="sm:col-span-2">
-                    <Label>Temporary password</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={form.temp_password}
-                        onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
-                        placeholder="Auto-generated"
-                        className="font-mono"
-                      />
-                      <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
-                        <RefreshCw className="mr-1.5 h-4 w-4" />Generate
-                      </Button>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Student will be required to change this on first login.
-                    </p>
-                  </div>
-                )}
+                <div className="sm:col-span-2">
+                  <Label>Home address</Label>
+                  <Input value={form.home_address} onChange={(e) => setForm({ ...form, home_address: e.target.value })} placeholder="Street, Barangay, City" />
+                </div>
               </div>
-              <DialogFooter>
+
+              <h4 className="mt-6 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Parent / Guardian information</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Guardian full name<Req /></Label>
+                  <Input value={form.guardian_name} aria-invalid={!!errors.guardian_name}
+                    onChange={(e) => { setForm({ ...form, guardian_name: e.target.value }); clearErr("guardian_name"); }} />
+                  <FieldError msg={errors.guardian_name} />
+                </div>
+                <div>
+                  <Label>Relationship<Req /></Label>
+                  <Select value={form.guardian_relationship}
+                    onValueChange={(v) => { setForm({ ...form, guardian_relationship: v }); clearErr("guardian_relationship"); }}>
+                    <SelectTrigger aria-invalid={!!errors.guardian_relationship}><SelectValue placeholder="Select relationship" /></SelectTrigger>
+                    <SelectContent>
+                      {GUARDIAN_RELATIONSHIPS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FieldError msg={errors.guardian_relationship} />
+                </div>
+                <div>
+                  <Label>Guardian mobile number<Req /></Label>
+                  <Input value={form.guardian_phone} aria-invalid={!!errors.guardian_phone}
+                    onChange={(e) => { setForm({ ...form, guardian_phone: e.target.value }); clearErr("guardian_phone"); }}
+                    placeholder="09171234567 or +639171234567" />
+                  <FieldError msg={errors.guardian_phone} />
+                </div>
+                <div>
+                  <Label>Guardian email <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input type="email" value={form.guardian_email} aria-invalid={!!errors.guardian_email}
+                    onChange={(e) => { setForm({ ...form, guardian_email: e.target.value }); clearErr("guardian_email"); }} />
+                  <FieldError msg={errors.guardian_email} />
+                </div>
+              </div>
+
+              <h4 className="mt-6 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Emergency contact <span className="normal-case text-xs">(optional — if different from guardian)</span></h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Contact name</Label>
+                  <Input value={form.emergency_contact_name} onChange={(e) => setForm({ ...form, emergency_contact_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Contact number</Label>
+                  <Input value={form.emergency_contact_phone} aria-invalid={!!errors.emergency_contact_phone}
+                    onChange={(e) => { setForm({ ...form, emergency_contact_phone: e.target.value }); clearErr("emergency_contact_phone"); }}
+                    placeholder="+63..." />
+                  <FieldError msg={errors.emergency_contact_phone} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Relationship</Label>
+                  <Input value={form.emergency_contact_relationship} onChange={(e) => setForm({ ...form, emergency_contact_relationship: e.target.value })} />
+                </div>
+              </div>
+
+              {!editing && (
+                <div className="mt-4">
+                  <Label>Temporary password</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={form.temp_password}
+                      onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
+                      placeholder="Auto-generated"
+                      className="font-mono"
+                    />
+                    <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
+                      <RefreshCw className="mr-1.5 h-4 w-4" />Generate
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Student will be required to change this on first login.
+                  </p>
+                </div>
+              )}
+
+              <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => upsert.mutate()}
-                  disabled={!form.student_no || !form.first_name || !form.last_name || (!editing && !form.email) || upsert.isPending}
+                  disabled={upsert.isPending}
                 >
                   {upsert.isPending ? "Saving…" : editing ? "Save changes" : "Create student"}
                 </Button>
               </DialogFooter>
             </DialogContent>
+
           </Dialog>
         }
       />

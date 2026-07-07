@@ -30,7 +30,12 @@ type Log = {
   status: string;
   provider_response: any;
   broadcast_id: string | null;
+  session_id: string | null;
+  student_id: string | null;
+  notification_type: string | null;
+  error_message: string | null;
   created_at: string;
+  students?: { full_name: string; guardian_name: string | null } | null;
 };
 
 const PAGE = 25;
@@ -51,19 +56,21 @@ function NotificationsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [notifType, setNotifType] = useState<string>("all");
   const [phone, setPhone] = useState("");
   const [page, setPage] = useState(0);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["sms-logs", from, to, status, phone, page],
+    queryKey: ["sms-logs", from, to, status, notifType, phone, page],
     queryFn: async () => {
       let q = (supabase as any).from("sms_logs")
-        .select("*", { count: "exact" })
+        .select("*, students:students!sms_logs_student_id_fkey(full_name, guardian_name)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(page * PAGE, page * PAGE + PAGE - 1);
       if (from) q = q.gte("created_at", `${from}T00:00:00`);
       if (to) q = q.lte("created_at", `${to}T23:59:59`);
       if (status !== "all") q = q.eq("status", status);
+      if (notifType !== "all") q = q.eq("notification_type", notifType);
       if (phone) q = q.ilike("phone", `%${phone}%`);
       const { data, error, count } = await q;
       if (error) throw error;

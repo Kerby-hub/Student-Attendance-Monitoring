@@ -587,32 +587,44 @@ export type Database = {
         Row: {
           broadcast_id: string | null
           created_at: string
+          error_message: string | null
           id: string
           message: string
+          notification_type: string | null
           phone: string
           provider_response: Json | null
           recipient_user_id: string | null
+          session_id: string | null
           status: Database["public"]["Enums"]["sms_status"]
+          student_id: string | null
         }
         Insert: {
           broadcast_id?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
           message: string
+          notification_type?: string | null
           phone: string
           provider_response?: Json | null
           recipient_user_id?: string | null
+          session_id?: string | null
           status?: Database["public"]["Enums"]["sms_status"]
+          student_id?: string | null
         }
         Update: {
           broadcast_id?: string | null
           created_at?: string
+          error_message?: string | null
           id?: string
           message?: string
+          notification_type?: string | null
           phone?: string
           provider_response?: Json | null
           recipient_user_id?: string | null
+          session_id?: string | null
           status?: Database["public"]["Enums"]["sms_status"]
+          student_id?: string | null
         }
         Relationships: [
           {
@@ -620,6 +632,20 @@ export type Database = {
             columns: ["broadcast_id"]
             isOneToOne: false
             referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -670,8 +696,16 @@ export type Database = {
           contact_number: string | null
           created_at: string
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
           first_name: string | null
           full_name: string
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          guardian_relationship: string | null
+          home_address: string | null
           id: string
           last_name: string | null
           middle_name: string | null
@@ -689,8 +723,16 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           first_name?: string | null
           full_name: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          home_address?: string | null
           id?: string
           last_name?: string | null
           middle_name?: string | null
@@ -708,8 +750,16 @@ export type Database = {
           contact_number?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
           first_name?: string | null
           full_name?: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          home_address?: string | null
           id?: string
           last_name?: string | null
           middle_name?: string | null

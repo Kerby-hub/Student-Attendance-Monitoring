@@ -69,9 +69,11 @@ function AttendanceSessionPage() {
     },
   });
 
-  // Find or create active session
+  // Find or create active session. Also run the DB-side safeguard that closes
+  // any expired sessions system-wide before we look one up here.
   useEffect(() => {
     (async () => {
+      try { await (supabase as any).rpc("process_expired_sessions"); } catch { /* non-fatal */ }
       const { data } = await supabase
         .from("attendance_sessions")
         .select("*")

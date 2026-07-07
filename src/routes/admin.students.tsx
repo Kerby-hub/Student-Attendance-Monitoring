@@ -43,6 +43,14 @@ type Student = {
   status: "active" | "inactive" | "graduated" | "archived";
   user_id: string | null;
   profile_picture_url: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_phone: string | null;
+  guardian_email: string | null;
+  home_address: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relationship: string | null;
   sections?: { name: string } | null;
 };
 
@@ -52,11 +60,27 @@ const STATUS_VARIANTS: Record<Student["status"], "default" | "secondary" | "dest
   active: "default", inactive: "secondary", graduated: "outline", archived: "destructive",
 };
 
+const GUARDIAN_RELATIONSHIPS = ["Mother", "Father", "Legal Guardian", "Grandparent", "Other"];
+
 function genStudentNo() {
   const y = new Date().getFullYear().toString().slice(-2);
   const r = Math.floor(1000 + Math.random() * 9000);
   return `S${y}-${r}`;
 }
+
+/** Normalize PH mobile → +639XXXXXXXXX or null when invalid. */
+function normalizePhPhone(input: string): string | null {
+  if (!input) return null;
+  const digits = input.replace(/[^\d]/g, "");
+  if (/^639\d{9}$/.test(digits)) return `+${digits}`;
+  if (/^09\d{9}$/.test(digits)) return `+63${digits.slice(1)}`;
+  if (/^9\d{9}$/.test(digits)) return `+63${digits}`;
+  return null;
+}
+
+const Req = () => <span className="text-destructive"> *</span>;
+const FieldError = ({ msg }: { msg?: string }) =>
+  msg ? <p className="mt-1 text-xs text-destructive">{msg}</p> : null;
 
 function StudentsPage() {
   const qc = useQueryClient();
@@ -73,8 +97,13 @@ function StudentsPage() {
     email: "", contact_number: "", program: "", year_level: "1",
     section_id: "" as string,
     temp_password: "",
+    guardian_name: "", guardian_relationship: "", guardian_phone: "",
+    guardian_email: "", home_address: "",
+    emergency_contact_name: "", emergency_contact_phone: "", emergency_contact_relationship: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const createUserFn = useServerFn(adminCreateUser);
   const setStatusFn = useServerFn(adminSetStatus);
@@ -128,13 +157,50 @@ function StudentsPage() {
     });
   }, [students, search, filterProgram, filterYear, filterSection, filterStatus]);
 
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.student_no.trim()) e.student_no = "Student ID is required.";
+    if (!form.first_name.trim()) e.first_name = "First name is required.";
+    if (!form.last_name.trim()) e.last_name = "Last name is required.";
+    if (!editing && !form.email.trim()) e.email = "Email is required for a login account.";
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      e.email = "Invalid email address.";
+    if (!form.guardian_name.trim()) e.guardian_name = "Guardian name is required.";
+    if (!form.guardian_relationship) e.guardian_relationship = "Please select a relationship.";
+    if (!form.guardian_phone.trim()) e.guardian_phone = "Guardian mobile number is required.";
+    else if (!normalizePhPhone(form.guardian_phone))
+      e.guardian_phone = "Invalid PH mobile number (e.g. 09171234567 or +639171234567).";
+    if (form.guardian_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.guardian_email.trim()))
+      e.guardian_email = "Invalid guardian email.";
+    if (form.emergency_contact_phone.trim() && !normalizePhPhone(form.emergency_contact_phone))
+      e.emergency_contact_phone = "Invalid PH mobile number.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error("Please fix the highlighted fields.");
       const first = form.first_name.trim();
       const last = form.last_name.trim();
       const mid = form.middle_name.trim();
       const full = [first, mid, last].filter(Boolean).join(" ");
       const email = form.email.trim();
+      const guardianPhone = normalizePhPhone(form.guardian_phone) ?? form.guardian_phone.trim();
+      const emergencyPhone = form.emergency_contact_phone.trim()
+        ? (normalizePhPhone(form.emergency_contact_phone) ?? form.emergency_contact_phone.trim())
+        : null;
+
+      const guardianPayload = {
+        guardian_name: form.guardian_name.trim() || null,
+        guardian_relationship: form.guardian_relationship || null,
+        guardian_phone: guardianPhone || null,
+        guardian_email: form.guardian_email.trim() || null,
+        home_address: form.home_address.trim() || null,
+        emergency_contact_name: form.emergency_contact_name.trim() || null,
+        emergency_contact_phone: emergencyPhone,
+        emergency_contact_relationship: form.emergency_contact_relationship.trim() || null,
+      };
 
       if (editing) {
         const payload = {
@@ -148,11 +214,10 @@ function StudentsPage() {
           program: form.program || null,
           year_level: form.year_level ? parseInt(form.year_level, 10) : null,
           section_id: form.section_id || null,
+          ...guardianPayload,
         };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
         if (error) throw error;
-        // Keep profiles + auth metadata in sync so Teacher/Student dashboards,
-        // Topbar, and AuthContext show the updated name everywhere.
         if (editing.user_id) {
           try {
             await updateProfileFn({
@@ -162,7 +227,7 @@ function StudentsPage() {
                 email: email || undefined,
               },
             });
-          } catch { /* non-fatal: student row already updated */ }
+          } catch { /* non-fatal */ }
         }
         return null;
       }
@@ -188,12 +253,12 @@ function StudentsPage() {
         },
       });
 
-      // Save first/middle/last on the student row (adminCreateUser only sets full_name)
       if (res?.userId) {
         await supabase.from("students").update({
           first_name: first || null,
           last_name: last || null,
           middle_name: mid || null,
+          ...guardianPayload,
         }).eq("user_id", res.userId);
       }
       return { email, password };
@@ -201,7 +266,7 @@ function StudentsPage() {
     onSuccess: (result) => {
       toast.success(editing ? "Student updated" : "Student created");
       invalidateUserCaches(qc);
-      setOpen(false); setEditing(null); setForm(emptyForm);
+      setOpen(false); setEditing(null); setForm(emptyForm); setErrors({});
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
@@ -222,11 +287,10 @@ function StudentsPage() {
     mutationFn: async ({ id, status, userId }: { id: string; status: Student["status"]; userId: string | null }) => {
       const { error } = await supabase.from("students").update({ status }).eq("id", id);
       if (error) throw error;
-      // Mirror to profile/auth so the user can/can't log in and other modules update.
       if (userId) {
         try {
           await setStatusFn({ data: { userId, status: status === "active" ? "active" : "inactive" } });
-        } catch { /* non-fatal: student row already updated */ }
+        } catch { /* non-fatal */ }
       }
     },
     onSuccess: (_d, v) => {
@@ -238,11 +302,13 @@ function StudentsPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setErrors({});
     setForm({ ...emptyForm, student_no: genStudentNo(), temp_password: generateTempPassword() });
     setOpen(true);
   };
   const openEdit = (s: Student) => {
     setEditing(s);
+    setErrors({});
     setForm({
       student_no: s.student_no,
       first_name: s.first_name ?? "",
@@ -254,9 +320,18 @@ function StudentsPage() {
       year_level: s.year_level ? String(s.year_level) : "",
       section_id: s.section_id ?? "",
       temp_password: "",
+      guardian_name: s.guardian_name ?? "",
+      guardian_relationship: s.guardian_relationship ?? "",
+      guardian_phone: s.guardian_phone ?? "",
+      guardian_email: s.guardian_email ?? "",
+      home_address: s.home_address ?? "",
+      emergency_contact_name: s.emergency_contact_name ?? "",
+      emergency_contact_phone: s.emergency_contact_phone ?? "",
+      emergency_contact_relationship: s.emergency_contact_relationship ?? "",
     });
     setOpen(true);
   };
+
 
   return (
     <div>
@@ -268,40 +343,50 @@ function StudentsPage() {
             <DialogTrigger asChild>
               <Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New student</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? "Edit student" : "New student"}</DialogTitle>
               </DialogHeader>
+
+              <h4 className="mt-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Student information</h4>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label>Student ID</Label>
+                  <Label>Student ID<Req /></Label>
                   <div className="flex gap-2">
-                    <Input value={form.student_no} onChange={(e) => setForm({ ...form, student_no: e.target.value })} />
+                    <Input value={form.student_no} aria-invalid={!!errors.student_no}
+                      onChange={(e) => { setForm({ ...form, student_no: e.target.value }); clearErr("student_no"); }} />
                     {!editing && (
                       <Button type="button" variant="outline" onClick={() => setForm({ ...form, student_no: genStudentNo() })}>
                         Generate
                       </Button>
                     )}
                   </div>
+                  <FieldError msg={errors.student_no} />
                 </div>
                 <div>
-                  <Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  <Label>Email{!editing && <Req />}</Label>
+                  <Input type="email" value={form.email} aria-invalid={!!errors.email}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); clearErr("email"); }} />
+                  <FieldError msg={errors.email} />
                 </div>
                 <div>
-                  <Label>First name</Label>
-                  <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+                  <Label>First name<Req /></Label>
+                  <Input value={form.first_name} aria-invalid={!!errors.first_name}
+                    onChange={(e) => { setForm({ ...form, first_name: e.target.value }); clearErr("first_name"); }} />
+                  <FieldError msg={errors.first_name} />
                 </div>
                 <div>
-                  <Label>Last name</Label>
-                  <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+                  <Label>Last name<Req /></Label>
+                  <Input value={form.last_name} aria-invalid={!!errors.last_name}
+                    onChange={(e) => { setForm({ ...form, last_name: e.target.value }); clearErr("last_name"); }} />
+                  <FieldError msg={errors.last_name} />
                 </div>
                 <div>
                   <Label>Middle name</Label>
                   <Input value={form.middle_name} onChange={(e) => setForm({ ...form, middle_name: e.target.value })} />
                 </div>
                 <div>
-                  <Label>Contact number</Label>
+                  <Label>Student contact number</Label>
                   <Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} placeholder="+63..." />
                 </div>
                 <div>
@@ -327,36 +412,96 @@ function StudentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {!editing && (
-                  <div className="sm:col-span-2">
-                    <Label>Temporary password</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={form.temp_password}
-                        onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
-                        placeholder="Auto-generated"
-                        className="font-mono"
-                      />
-                      <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
-                        <RefreshCw className="mr-1.5 h-4 w-4" />Generate
-                      </Button>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Student will be required to change this on first login.
-                    </p>
-                  </div>
-                )}
+                <div className="sm:col-span-2">
+                  <Label>Home address</Label>
+                  <Input value={form.home_address} onChange={(e) => setForm({ ...form, home_address: e.target.value })} placeholder="Street, Barangay, City" />
+                </div>
               </div>
-              <DialogFooter>
+
+              <h4 className="mt-6 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Parent / Guardian information</h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Guardian full name<Req /></Label>
+                  <Input value={form.guardian_name} aria-invalid={!!errors.guardian_name}
+                    onChange={(e) => { setForm({ ...form, guardian_name: e.target.value }); clearErr("guardian_name"); }} />
+                  <FieldError msg={errors.guardian_name} />
+                </div>
+                <div>
+                  <Label>Relationship<Req /></Label>
+                  <Select value={form.guardian_relationship}
+                    onValueChange={(v) => { setForm({ ...form, guardian_relationship: v }); clearErr("guardian_relationship"); }}>
+                    <SelectTrigger aria-invalid={!!errors.guardian_relationship}><SelectValue placeholder="Select relationship" /></SelectTrigger>
+                    <SelectContent>
+                      {GUARDIAN_RELATIONSHIPS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FieldError msg={errors.guardian_relationship} />
+                </div>
+                <div>
+                  <Label>Guardian mobile number<Req /></Label>
+                  <Input value={form.guardian_phone} aria-invalid={!!errors.guardian_phone}
+                    onChange={(e) => { setForm({ ...form, guardian_phone: e.target.value }); clearErr("guardian_phone"); }}
+                    placeholder="09171234567 or +639171234567" />
+                  <FieldError msg={errors.guardian_phone} />
+                </div>
+                <div>
+                  <Label>Guardian email <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                  <Input type="email" value={form.guardian_email} aria-invalid={!!errors.guardian_email}
+                    onChange={(e) => { setForm({ ...form, guardian_email: e.target.value }); clearErr("guardian_email"); }} />
+                  <FieldError msg={errors.guardian_email} />
+                </div>
+              </div>
+
+              <h4 className="mt-6 text-sm font-semibold text-muted-foreground uppercase tracking-wide">Emergency contact <span className="normal-case text-xs">(optional — if different from guardian)</span></h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label>Contact name</Label>
+                  <Input value={form.emergency_contact_name} onChange={(e) => setForm({ ...form, emergency_contact_name: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Contact number</Label>
+                  <Input value={form.emergency_contact_phone} aria-invalid={!!errors.emergency_contact_phone}
+                    onChange={(e) => { setForm({ ...form, emergency_contact_phone: e.target.value }); clearErr("emergency_contact_phone"); }}
+                    placeholder="+63..." />
+                  <FieldError msg={errors.emergency_contact_phone} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Relationship</Label>
+                  <Input value={form.emergency_contact_relationship} onChange={(e) => setForm({ ...form, emergency_contact_relationship: e.target.value })} />
+                </div>
+              </div>
+
+              {!editing && (
+                <div className="mt-4">
+                  <Label>Temporary password</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={form.temp_password}
+                      onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
+                      placeholder="Auto-generated"
+                      className="font-mono"
+                    />
+                    <Button type="button" variant="outline" onClick={() => setForm({ ...form, temp_password: generateTempPassword() })}>
+                      <RefreshCw className="mr-1.5 h-4 w-4" />Generate
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Student will be required to change this on first login.
+                  </p>
+                </div>
+              )}
+
+              <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => upsert.mutate()}
-                  disabled={!form.student_no || !form.first_name || !form.last_name || (!editing && !form.email) || upsert.isPending}
+                  disabled={upsert.isPending}
                 >
                   {upsert.isPending ? "Saving…" : editing ? "Save changes" : "Create student"}
                 </Button>
               </DialogFooter>
             </DialogContent>
+
           </Dialog>
         }
       />

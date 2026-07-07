@@ -52,6 +52,7 @@ import { Route as AdminBroadcastRouteImport } from './routes/admin.broadcast'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin.audit-logs'
 import { Route as TeacherAttendanceSessionScheduleIdRouteImport } from './routes/teacher.attendance-session.$scheduleId'
 import { Route as AdminStudentsIdRouteImport } from './routes/admin.students.$id'
+import { Route as ApiPublicHooksDispatchSmsRouteImport } from './routes/api/public/hooks/dispatch-sms'
 
 const TeacherRoute = TeacherRouteImport.update({
   id: '/teacher',
@@ -269,6 +270,12 @@ const AdminStudentsIdRoute = AdminStudentsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AdminStudentsRoute,
 } as any)
+const ApiPublicHooksDispatchSmsRoute =
+  ApiPublicHooksDispatchSmsRouteImport.update({
+    id: '/api/public/hooks/dispatch-sms',
+    path: '/api/public/hooks/dispatch-sms',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/teacher/': typeof TeacherIndexRoute
   '/admin/students/$id': typeof AdminStudentsIdRoute
   '/teacher/attendance-session/$scheduleId': typeof TeacherAttendanceSessionScheduleIdRoute
+  '/api/public/hooks/dispatch-sms': typeof ApiPublicHooksDispatchSmsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -356,6 +364,7 @@ export interface FileRoutesByTo {
   '/teacher': typeof TeacherIndexRoute
   '/admin/students/$id': typeof AdminStudentsIdRoute
   '/teacher/attendance-session/$scheduleId': typeof TeacherAttendanceSessionScheduleIdRoute
+  '/api/public/hooks/dispatch-sms': typeof ApiPublicHooksDispatchSmsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -402,6 +411,7 @@ export interface FileRoutesById {
   '/teacher/': typeof TeacherIndexRoute
   '/admin/students/$id': typeof AdminStudentsIdRoute
   '/teacher/attendance-session/$scheduleId': typeof TeacherAttendanceSessionScheduleIdRoute
+  '/api/public/hooks/dispatch-sms': typeof ApiPublicHooksDispatchSmsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/teacher/'
     | '/admin/students/$id'
     | '/teacher/attendance-session/$scheduleId'
+    | '/api/public/hooks/dispatch-sms'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/admin/students/$id'
     | '/teacher/attendance-session/$scheduleId'
+    | '/api/public/hooks/dispatch-sms'
   id:
     | '__root__'
     | '/'
@@ -536,6 +548,7 @@ export interface FileRouteTypes {
     | '/teacher/'
     | '/admin/students/$id'
     | '/teacher/attendance-session/$scheduleId'
+    | '/api/public/hooks/dispatch-sms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -549,6 +562,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   StudentRoute: typeof StudentRouteWithChildren
   TeacherRoute: typeof TeacherRouteWithChildren
+  ApiPublicHooksDispatchSmsRoute: typeof ApiPublicHooksDispatchSmsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -854,6 +868,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStudentsIdRouteImport
       parentRoute: typeof AdminStudentsRoute
     }
+    '/api/public/hooks/dispatch-sms': {
+      id: '/api/public/hooks/dispatch-sms'
+      path: '/api/public/hooks/dispatch-sms'
+      fullPath: '/api/public/hooks/dispatch-sms'
+      preLoaderRoute: typeof ApiPublicHooksDispatchSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -971,6 +992,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   StudentRoute: StudentRouteWithChildren,
   TeacherRoute: TeacherRouteWithChildren,
+  ApiPublicHooksDispatchSmsRoute: ApiPublicHooksDispatchSmsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

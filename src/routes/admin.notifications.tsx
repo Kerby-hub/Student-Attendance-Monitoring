@@ -30,7 +30,12 @@ type Log = {
   status: string;
   provider_response: any;
   broadcast_id: string | null;
+  session_id: string | null;
+  student_id: string | null;
+  notification_type: string | null;
+  error_message: string | null;
   created_at: string;
+  students?: { full_name: string; guardian_name: string | null } | null;
 };
 
 const PAGE = 25;
@@ -51,19 +56,21 @@ function NotificationsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [notifType, setNotifType] = useState<string>("all");
   const [phone, setPhone] = useState("");
   const [page, setPage] = useState(0);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["sms-logs", from, to, status, phone, page],
+    queryKey: ["sms-logs", from, to, status, notifType, phone, page],
     queryFn: async () => {
       let q = (supabase as any).from("sms_logs")
-        .select("*", { count: "exact" })
+        .select("*, students:students!sms_logs_student_id_fkey(full_name, guardian_name)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(page * PAGE, page * PAGE + PAGE - 1);
       if (from) q = q.gte("created_at", `${from}T00:00:00`);
       if (to) q = q.lte("created_at", `${to}T23:59:59`);
       if (status !== "all") q = q.eq("status", status);
+      if (notifType !== "all") q = q.eq("notification_type", notifType);
       if (phone) q = q.ilike("phone", `%${phone}%`);
       const { data, error, count } = await q;
       if (error) throw error;
@@ -106,7 +113,7 @@ function NotificationsPage() {
       />
 
       <Card className="mb-4 shadow-[var(--shadow-card)]"><CardContent className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div><Label>From</Label><Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} /></div>
           <div><Label>To</Label><Input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} max={today} /></div>
           <div>
@@ -119,6 +126,18 @@ function NotificationsPage() {
                 <SelectItem value="failed">Failed</SelectItem>
                 <SelectItem value="stubbed">Stubbed</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Select value={notifType} onValueChange={(v) => { setNotifType(v); setPage(0); }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="late">Late</SelectItem>
+                <SelectItem value="absence">Absence</SelectItem>
+                <SelectItem value="announcement">Announcement</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -145,25 +164,34 @@ function NotificationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>When</TableHead><TableHead>Phone</TableHead>
-              <TableHead>Message</TableHead><TableHead>Status</TableHead>
-              <TableHead>Source</TableHead><TableHead className="text-right">Actions</TableHead>
+              <TableHead>When</TableHead>
+              <TableHead>Student</TableHead>
+              <TableHead>Guardian</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Message</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Error</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+              <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 <MessageSquare className="mx-auto mb-2 h-8 w-8 opacity-40" />No SMS logs match the filter.
               </TableCell></TableRow>
             ) : rows.map((l) => (
               <TableRow key={l.id}>
                 <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{new Date(l.created_at).toLocaleString()}</TableCell>
+                <TableCell className="text-sm">{l.students?.full_name ?? "—"}</TableCell>
+                <TableCell className="text-sm">{l.students?.guardian_name ?? "—"}</TableCell>
                 <TableCell className="font-mono text-sm">{l.phone}</TableCell>
-                <TableCell className="max-w-[420px] text-sm"><span className="line-clamp-2">{l.message}</span></TableCell>
+                <TableCell>{l.notification_type ? <Badge variant="outline" className="capitalize">{l.notification_type}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
+                <TableCell className="max-w-[340px] text-sm"><span className="line-clamp-2">{l.message}</span></TableCell>
                 <TableCell><Badge variant={statusVariant(l.status)}>{l.status}</Badge></TableCell>
-                <TableCell className="text-xs text-muted-foreground">{l.broadcast_id ? "Broadcast" : "Auto"}</TableCell>
+                <TableCell className="max-w-[200px] text-xs text-destructive"><span className="line-clamp-2">{l.error_message ?? ""}</span></TableCell>
                 <TableCell className="text-right">
                   {l.status === "failed" && (
                     <Button size="sm" variant="ghost" onClick={() => retry.mutate(l)} disabled={retry.isPending}>
@@ -176,6 +204,7 @@ function NotificationsPage() {
           </TableBody>
         </Table>
       </div>
+
 
       <div className="mt-3 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Page {page + 1} of {pages}</span>

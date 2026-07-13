@@ -170,7 +170,13 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     });
 
 
-    return { ok: true, userId: newUserId };
+    return {
+      ok: true,
+      userId: newUserId,
+      emailStatus,
+      emailProvider: emailResult.provider,
+      emailError: emailResult.error ?? null,
+    };
   });
 
 export const adminResetPassword = createServerFn({ method: "POST" })

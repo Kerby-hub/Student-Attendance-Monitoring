@@ -49,7 +49,7 @@ function SettingsPage() {
       const p = parseStr(map.get("sms_provider"), "stub");
       setSmsProvider(p === "semaphore" ? "semaphore" : "stub");
       const ep = parseStr(map.get("email_provider"), "stub");
-      setEmailProvider(ep === "resend" ? "resend" : "stub");
+      setEmailProvider(ep === "resend" ? "resend" : ep === "smtp" ? "smtp" : "stub");
       setLoading(false);
     })();
   }, []);

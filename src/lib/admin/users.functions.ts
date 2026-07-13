@@ -119,50 +119,33 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       });
     }
 
-    // 5) Credential email — stub by default; sends via real provider when
-    //    Admin → Settings → Email provider is set to a configured option.
+    // 5) Credential email — provider resolved from Admin → Settings first,
+    //    then EMAIL_PROVIDER env, finally stub. Supports stub/resend/smtp.
     const appUrl = process.env.APP_PUBLIC_URL || process.env.SITE_URL || "";
+    const loginUrl = `${appUrl || "[your site]"}/login`;
+    const { sendCredentialsEmail, resolveEmailProvider } = await import(
+      "@/lib/email/credentials.server"
+    );
+    const { data: setting } = await supabaseAdmin
+      .from("system_settings").select("value").eq("key", "email_provider").maybeSingle();
+    const provider = resolveEmailProvider(setting?.value);
     const subject = "Your Student Attendance Monitoring System Account";
     const body =
       `Hello ${data.fullName},\n\n` +
       `An account has been created for you in the Student Attendance Monitoring System.\n\n` +
       `Login email: ${data.email}\n` +
       `Temporary password: ${data.password}\n` +
-      `Login page: ${appUrl || "[your site]"}/login\n\n` +
+      `Login page: ${loginUrl}\n\n` +
       `For security, you will be required to change your password after your first login.\n` +
       `Please do not share this password with anyone.\n\nThank you.`;
 
-    let emailStatus: "stubbed" | "sent" | "failed" = "stubbed";
-    let emailProviderInfo: Record<string, unknown> = { stub: true };
-    try {
-      const { data: setting } = await supabaseAdmin
-        .from("system_settings").select("value").eq("key", "email_provider").maybeSingle();
-      const provider = typeof setting?.value === "string"
-        ? setting.value.replace(/^"|"$/g, "")
-        : (setting?.value ?? "stub");
-      const resendKey = process.env.RESEND_API_KEY;
-      const fromAddr = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
-      if (provider === "resend" && resendKey) {
-        const html = body.split("\n").map((l) => l ? `<p>${l.replace(/</g, "&lt;")}</p>` : "<br/>").join("");
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
-          body: JSON.stringify({ from: fromAddr, to: [data.email], subject, html, text: body }),
-        });
-        if (res.ok) {
-          emailStatus = "sent";
-          emailProviderInfo = { provider: "resend", id: (await res.json())?.id ?? null };
-        } else {
-          emailStatus = "failed";
-          emailProviderInfo = { provider: "resend", error: await res.text().catch(() => "send failed") };
-        }
-      } else {
-        emailProviderInfo = { provider: provider || "stub", stub: true };
-      }
-    } catch (err) {
-      emailStatus = "failed";
-      emailProviderInfo = { error: err instanceof Error ? err.message : String(err) };
-    }
+    const emailResult = await sendCredentialsEmail({
+      toEmail: data.email,
+      toName: data.fullName,
+      tempPassword: data.password,
+      loginUrl,
+      provider,
+    });
 
     await supabaseAdmin.from("email_logs").insert({
       recipient_user_id: newUserId,
@@ -170,9 +153,12 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       subject,
       body,
       template: "credentials",
-      status: emailStatus,
-      provider_response: emailProviderInfo as never,
+      provider: emailResult.provider,
+      status: emailResult.status,
+      error_message: emailResult.error ?? null,
+      provider_response: emailResult.info as never,
     });
+    const emailStatus = emailResult.status;
 
     // 6) Audit log
     await supabaseAdmin.from("audit_logs").insert({

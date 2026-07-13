@@ -18,7 +18,7 @@ export const Route = createFileRoute("/admin/settings")({
 });
 
 type SmsProvider = "stub" | "semaphore";
-type EmailProvider = "stub" | "resend";
+type EmailProvider = "stub" | "resend" | "smtp";
 
 
 function parseStr(v: unknown, fallback: string): string {
@@ -49,7 +49,7 @@ function SettingsPage() {
       const p = parseStr(map.get("sms_provider"), "stub");
       setSmsProvider(p === "semaphore" ? "semaphore" : "stub");
       const ep = parseStr(map.get("email_provider"), "stub");
-      setEmailProvider(ep === "resend" ? "resend" : "stub");
+      setEmailProvider(ep === "resend" ? "resend" : ep === "smtp" ? "smtp" : "stub");
       setLoading(false);
     })();
   }, []);
@@ -164,10 +164,11 @@ function SettingsPage() {
                   <SelectContent>
                     <SelectItem value="stub">Stub (log only — no real email)</SelectItem>
                     <SelectItem value="resend">Resend</SelectItem>
+                    <SelectItem value="smtp">SMTP (Gmail / custom)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {emailProvider === "stub" ? (
+              {emailProvider === "stub" && (
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertTitle>Stub mode</AlertTitle>
@@ -175,12 +176,26 @@ function SettingsPage() {
                     Credential emails are logged to <strong>Email Logs</strong> but not actually delivered. Admins can read each generated email there.
                   </AlertDescription>
                 </Alert>
-              ) : (
+              )}
+              {emailProvider === "resend" && (
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertTitle>Resend mode</AlertTitle>
                   <AlertDescription>
                     Real emails will be sent via Resend. Configure <code>RESEND_API_KEY</code> and (optionally) <code>RESEND_FROM_EMAIL</code> as server secrets. Failures are recorded in Email Logs.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {emailProvider === "smtp" && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>SMTP mode</AlertTitle>
+                  <AlertDescription>
+                    Real emails will be sent through an SMTP server (e.g. Gmail with an App Password) — useful for demos with Yopmail or any inbox.
+                    Configure these server secrets:
+                    <br />
+                    <code>SMTP_HOST</code> (e.g. <code>smtp.gmail.com</code>), <code>SMTP_PORT</code> (465), <code>SMTP_USER</code>, <code>SMTP_PASS</code>, <code>SMTP_FROM_EMAIL</code> (e.g. <code>SAMS &lt;you@gmail.com&gt;</code>).
+                    Failures are recorded in Email Logs with the actual SMTP error.
                   </AlertDescription>
                 </Alert>
               )}

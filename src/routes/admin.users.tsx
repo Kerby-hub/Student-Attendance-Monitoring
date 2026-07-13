@@ -131,7 +131,7 @@ function UsersPage() {
 
   const createUser = useMutation({
     mutationFn: async () => {
-      await createUserFn({
+      return await createUserFn({
         data: {
           email: form.email,
           password: form.password,
@@ -148,8 +148,21 @@ function UsersPage() {
         },
       });
     },
-    onSuccess: () => {
-      toast.success("Account created", { description: `Temporary password: ${form.password}` });
+    onSuccess: (res) => {
+      const r = res as { emailStatus?: string; emailProvider?: string; emailError?: string | null } | undefined;
+      if (r?.emailStatus === "sent") {
+        toast.success("Account created", {
+          description: `Credentials emailed via ${r.emailProvider ?? "email"}. Temporary password: ${form.password}`,
+        });
+      } else if (r?.emailStatus === "failed") {
+        toast.warning("Account created — email failed", {
+          description: `${r.emailProvider ?? "email"} error: ${r.emailError ?? "unknown"}. Temporary password: ${form.password}`,
+        });
+      } else {
+        toast.success("Account created", {
+          description: `Email in stub mode (not sent). Temporary password: ${form.password}`,
+        });
+      }
       invalidateUserCaches(qc);
       setOpen(false); resetForm();
     },

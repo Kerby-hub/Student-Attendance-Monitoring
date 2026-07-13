@@ -384,7 +384,9 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          error_message: string | null
           id: string
+          provider: string | null
           provider_response: Json | null
           recipient_email: string
           recipient_user_id: string | null
@@ -395,7 +397,9 @@ export type Database = {
         Insert: {
           body: string
           created_at?: string
+          error_message?: string | null
           id?: string
+          provider?: string | null
           provider_response?: Json | null
           recipient_email: string
           recipient_user_id?: string | null
@@ -406,7 +410,9 @@ export type Database = {
         Update: {
           body?: string
           created_at?: string
+          error_message?: string | null
           id?: string
+          provider?: string | null
           provider_response?: Json | null
           recipient_email?: string
           recipient_user_id?: string | null

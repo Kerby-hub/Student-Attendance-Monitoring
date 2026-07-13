@@ -156,8 +156,8 @@ export const adminCreateUser = createServerFn({ method: "POST" })
       provider: emailResult.provider,
       status: emailResult.status,
       error_message: emailResult.error ?? null,
-      provider_response: emailResult.info as never,
-    });
+      provider_response: emailResult.info,
+    } as never);
     const emailStatus = emailResult.status;
 
     // 6) Audit log

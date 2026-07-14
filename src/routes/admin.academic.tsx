@@ -584,7 +584,7 @@ function EnrollmentsTab() {
                   </Select>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => { if (confirm("Remove this enrollment? Attendance records are preserved.")) remove.mutate(e.id); }}>Remove</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setRemoveTarget({ id: e.id, label: e.students?.full_name ?? "this enrollment" })}>Remove</Button>
                 </TableCell>
               </TableRow>
             ))}

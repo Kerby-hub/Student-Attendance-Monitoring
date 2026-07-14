@@ -203,8 +203,6 @@ function AttendanceSessionPage() {
     setSession(data as Session);
   };
 
-  const closeSession = async () => {
-    if (!session) return;
   const requestClose = () => { if (session) setCloseOpen(true); };
   const performClose = async () => {
     if (!session) return;

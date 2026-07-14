@@ -152,7 +152,7 @@ function SchedulesPage() {
         }
         for (const [day, row] of keepByDay) {
           const { error } = await supabase.from("class_schedules")
-            .update({ ...payloadBase, day })
+            .update({ ...payloadBase, day: day as Day })
             .eq("id", row.id);
           if (error) throw error;
           affectedIds.push(row.id);

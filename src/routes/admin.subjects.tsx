@@ -59,8 +59,6 @@ function SubjectsPage() {
     },
   });
 
-  const upsert = useMutation({
-    mutationFn: async () => {
   function validate() {
     const e: Record<string, string> = {};
     if (!form.code.trim()) e.code = "Code is required.";

@@ -302,23 +302,45 @@ export const adminUpdateUserProfile = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // If email is provided, check it against the current record. Only enforce
+    // uniqueness when it actually changed to another account's email.
+    let normalizedEmail: string | undefined;
+    if (typeof data.email === "string" && data.email.trim()) {
+      normalizedEmail = data.email.trim().toLowerCase();
+      const { data: current } = await supabaseAdmin
+        .from("profiles").select("email").eq("id", data.userId).maybeSingle();
+      const currentEmail = (current?.email ?? "").trim().toLowerCase();
+      if (normalizedEmail !== currentEmail) {
+        const { data: taken } = await supabaseAdmin
+          .from("profiles").select("id").ilike("email", normalizedEmail)
+          .neq("id", data.userId).maybeSingle();
+        if (taken) throw new Error("EMAIL_TAKEN: Email already exists.");
+      }
+    }
+
     const profilePatch: { full_name?: string; email?: string } = {};
     if (typeof data.fullName === "string") profilePatch.full_name = data.fullName;
-    if (typeof data.email === "string" && data.email) profilePatch.email = data.email;
+    if (normalizedEmail) profilePatch.email = normalizedEmail;
     if (Object.keys(profilePatch).length > 0) {
       await supabaseAdmin.from("profiles").update(profilePatch).eq("id", data.userId);
     }
 
     // Keep auth metadata in sync so anything reading user_metadata also updates.
     const authUpdate: Record<string, unknown> = {};
-    if (typeof data.email === "string" && data.email) authUpdate.email = data.email;
+    if (normalizedEmail) authUpdate.email = normalizedEmail;
     if (typeof data.fullName === "string") {
       authUpdate.user_metadata = { full_name: data.fullName };
     }
     if (Object.keys(authUpdate).length > 0) {
       try {
         await supabaseAdmin.auth.admin.updateUserById(data.userId, authUpdate as never);
-      } catch { /* non-fatal */ }
+      } catch (e) {
+        const msg = (e as Error).message || "";
+        if (/already.*(registered|exists)|duplicate/i.test(msg)) {
+          throw new Error("EMAIL_TAKEN: Email already exists.");
+        }
+        /* other errors non-fatal */
+      }
     }
 
     await supabaseAdmin.from("audit_logs").insert({

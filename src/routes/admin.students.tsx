@@ -445,7 +445,7 @@ function StudentsPage() {
                 <div>
                   <Label>Year level</Label>
                   <Select value={form.year_level} onValueChange={(v) => setForm({ ...form, year_level: v })}>
-                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
                     <SelectContent>
                       {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
                     </SelectContent>

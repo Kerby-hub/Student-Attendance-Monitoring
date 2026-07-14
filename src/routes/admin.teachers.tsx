@@ -233,15 +233,31 @@ function TeachersPage() {
         title="Teachers"
         description="Create teacher records and assign subjects, sections, and schedules."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setErrors({}); }}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New teacher</Button></DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editing ? "Edit teacher" : "New teacher"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label>Teacher ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} placeholder="Auto-generated, e.g. TCH-2026-0001" disabled={!editing} /></div>
+                <div>
+                  <Label>Teacher ID{editing && <span className="text-destructive"> *</span>} <span className="text-xs text-muted-foreground">(auto if blank)</span></Label>
+                  <Input value={form.teacher_no} aria-invalid={!!errors.teacher_no}
+                    onChange={(e) => { setForm({ ...form, teacher_no: e.target.value }); clearErr("teacher_no"); }}
+                    placeholder="Auto-generated, e.g. TCH-2026-0001" disabled={!editing} />
+                  {errors.teacher_no && <p className="mt-1 text-xs text-destructive">{errors.teacher_no}</p>}
+                </div>
                 <div><Label>Position</Label><Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Instructor" /></div>
-                <div className="sm:col-span-2"><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
-                <div className="sm:col-span-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="sm:col-span-2">
+                  <Label>Full name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.full_name} aria-invalid={!!errors.full_name}
+                    onChange={(e) => { setForm({ ...form, full_name: e.target.value }); clearErr("full_name"); }} />
+                  {errors.full_name && <p className="mt-1 text-xs text-destructive">{errors.full_name}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Email<span className="text-destructive"> *</span></Label>
+                  <Input type="email" value={form.email} aria-invalid={!!errors.email}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); clearErr("email"); }} />
+                  {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
+                </div>
                 <div className="sm:col-span-2">
                   <Label>Department</Label>
                   <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>

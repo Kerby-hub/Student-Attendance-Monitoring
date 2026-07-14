@@ -174,7 +174,7 @@ function TeacherReports() {
             value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={statusF} onValueChange={setStatusF}>
-          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="present">Present</SelectItem>
@@ -183,7 +183,7 @@ function TeacherReports() {
           </SelectContent>
         </Select>
         <Select value={subjF} onValueChange={setSubjF}>
-          <SelectTrigger><SelectValue placeholder="Subject" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All subjects</SelectItem>
             {subjects.map(([code, label]) => (

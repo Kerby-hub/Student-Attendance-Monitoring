@@ -573,28 +573,28 @@ function StudentsPage() {
           />
         </div>
         <Select value={filterProgram} onValueChange={setFilterProgram}>
-          <SelectTrigger><SelectValue placeholder="Program" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All programs</SelectItem>
             {programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterYear} onValueChange={setFilterYear}>
-          <SelectTrigger><SelectValue placeholder="Year level" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All years</SelectItem>
             {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSection} onValueChange={setFilterSection}>
-          <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All sections</SelectItem>
             {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>

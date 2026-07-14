@@ -86,8 +86,12 @@ function SectionsPage() {
       const { error } = await supabase.from("sections").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => { toast.success("Section deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); },
+    onError: (e: Error) => {
+      if (/foreign key|violates|referenced/i.test(e.message)) {
+        toast.error("This section is linked to existing data and cannot be deleted. Consider archiving instead.");
+      } else toast.error(e.message);
+    },
   });
 
   const openCreate = () => { setEditing(null); setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" }); setOpen(true); };

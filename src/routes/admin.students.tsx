@@ -652,11 +652,7 @@ function StudentsPage() {
                     </Button>
                   ) : (
                     <Button variant="ghost" size="icon" title="Archive"
-                      onClick={() => {
-                        if (confirm(`Archive ${s.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) {
-                          setStatus.mutate({ id: s.id, status: "archived", userId: s.user_id });
-                        }
-                      }}>
+                      onClick={() => setArchiveTarget(s)}>
                       <Archive className="h-4 w-4" />
                     </Button>
                   )}
@@ -666,6 +662,35 @@ function StudentsPage() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!archiveTarget} onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive <span className="font-medium">{archiveTarget?.full_name}</span>?
+              They will no longer be able to access the system, but historical
+              attendance records will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={setStatus.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={setStatus.isPending}
+              onClick={() => {
+                if (!archiveTarget) return;
+                const t = archiveTarget;
+                setStatus.mutate(
+                  { id: t.id, status: "archived", userId: t.user_id },
+                  { onSettled: () => setArchiveTarget(null) },
+                );
+              }}
+            >
+              {setStatus.isPending ? "Archiving…" : "Archive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

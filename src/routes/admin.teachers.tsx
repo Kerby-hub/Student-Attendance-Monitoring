@@ -77,8 +77,6 @@ function TeachersPage() {
     },
   });
 
-  const upsert = useMutation({
-    mutationFn: async () => {
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (editing && !form.teacher_no.trim()) e.teacher_no = "Teacher ID is required.";

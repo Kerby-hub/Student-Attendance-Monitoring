@@ -90,6 +90,7 @@ function StudentsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Student | null>(null);
   const [search, setSearch] = useState("");
   const [filterProgram, setFilterProgram] = useState("all");
   const [filterYear, setFilterYear] = useState("all");

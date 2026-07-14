@@ -51,7 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from("user_roles").select("role").eq("user_id", userId),
       ]);
       setProfile(profileData as Profile | null);
-      setRoles(((rolesData ?? []) as { role: AppRole }[]).map((r) => r.role));
+      const nextRoles = ((rolesData ?? []) as { role: AppRole }[]).map((r) => r.role);
+      setRoles(nextRoles);
+      rolesRef.current = nextRoles;
     } finally {
       setRoleLoading(false);
     }

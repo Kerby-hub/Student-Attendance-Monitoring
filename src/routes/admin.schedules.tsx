@@ -208,7 +208,7 @@ function SchedulesPage() {
   });
 
   const openCreate = () => {
-    setEditing(null);
+    setEditing(null); setEditingGroupIds([]);
     const currentYear = years.find((y) => y.id === currentSemester?.academic_year_id);
     setForm({
       ...empty,
@@ -219,19 +219,25 @@ function SchedulesPage() {
     });
     setZoneIds([]); setErrors({}); setOpen(true);
   };
-  const openEdit = (s: Schedule) => {
+  const openEditGroup = (rows: Schedule[]) => {
+    const s = rows[0];
     setEditing(s);
+    setEditingGroupIds(rows.map((r) => r.id));
     setForm({
       subject_id: s.subject_id, teacher_id: s.teacher_id, section_id: s.section_id,
       room: s.room ?? "", day: s.day,
-      days: [s.day],
+      days: rows.map((r) => r.day),
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
       academic_year_id: s.academic_year_id ?? "",
       semester_id: s.semester_id ?? "",
     });
-    setZoneIds(s.schedule_geofences?.map((g) => g.zone_id) ?? []);
-    setOpen(true);
+    // Zones are stored per row; take the union across the group so the edit
+    // form reflects everything the group currently has assigned.
+    const zoneSet = new Set<string>();
+    for (const r of rows) r.schedule_geofences?.forEach((g) => zoneSet.add(g.zone_id));
+    setZoneIds(Array.from(zoneSet));
+    setErrors({}); setOpen(true);
   };
 
   useEffect(() => { if (!open) { setZoneIds([]); } }, [open]);

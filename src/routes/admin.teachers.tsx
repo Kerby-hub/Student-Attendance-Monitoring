@@ -82,7 +82,7 @@ function TeachersPage() {
     if (editing && !form.teacher_no.trim()) e.teacher_no = "Teacher ID is required.";
     if (!form.full_name.trim()) e.full_name = "Full name is required.";
     if (!form.email.trim()) e.email = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalke email address.".replace("valke", "valid");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalid email address.";
     setErrors(e);
     return Object.keys(e).length === 0;
   }

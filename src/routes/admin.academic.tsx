@@ -415,11 +415,9 @@ function SemestersTab() {
                     </Button>
                   )}
                   {s.status !== "closed" && s.status !== "archived" && (
-                    <Button size="sm" variant="outline" onClick={() => {
-                      if (confirm("Close this semester? New attendance check-ins will be rejected. Historical data is preserved.")) {
-                        setStatus.mutate({ id: s.id, status: "closed", is_current: false });
-                      }
-                    }}><XCircle className="mr-1 h-3.5 w-3.5" />Close</Button>
+                    <Button size="sm" variant="outline" onClick={() => setCloseTarget(s)}>
+                      <XCircle className="mr-1 h-3.5 w-3.5" />Close
+                    </Button>
                   )}
                   {s.status === "closed" && (
                     <Button size="sm" variant="outline" onClick={() => setStatus.mutate({ id: s.id, status: "archived" })}>

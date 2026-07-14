@@ -458,6 +458,7 @@ function EnrollmentsTab() {
   const { data: semesters = [] } = useSemesters(yearFilter === "all" ? undefined : yearFilter);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [sectionFilter, setSectionFilter] = useState("all");
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(null);
 
   const { data: sections = [] } = useQuery({
     queryKey: ["sections-simple"],

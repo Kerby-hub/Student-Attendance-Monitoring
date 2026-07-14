@@ -344,7 +344,7 @@ function SchedulesPage() {
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" title="View students" onClick={() => setViewStudents(s)}><Users className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this schedule?")) remove.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -352,6 +352,16 @@ function SchedulesPage() {
         </Table>
       </div>
       <ScheduleStudentsDialog schedule={viewStudents} onClose={() => setViewStudents(null)} />
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(v) => { if (!v) setToDelete(null); }}
+        title="Delete this schedule?"
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.subjects?.code} · {toDelete?.sections?.name}</span>? Historical attendance sessions will remain, but this schedule cannot be recovered.</>}
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+      />
     </div>
   );
 }

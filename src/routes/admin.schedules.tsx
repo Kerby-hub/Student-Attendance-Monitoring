@@ -50,6 +50,7 @@ type Schedule = {
 const empty = {
   subject_id: "", teacher_id: "", section_id: "",
   room: "", day: "monday" as Day,
+  days: ["monday"] as Day[],
   start_time: "08:00", end_time: "09:00",
   semester: "1st", school_year: "2025-2026",
   academic_year_id: "" as string,
@@ -105,24 +106,49 @@ function SchedulesPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, room: form.room || null };
-      let scheduleId: string;
+      const days = form.days.length > 0 ? form.days : [form.day];
+      // Strip `days` (client-only); insert one row per selected day.
+      const { days: _drop, ...base } = form;
+      const payloadBase = { ...base, room: form.room || null };
+      const scheduleIds: string[] = [];
+
       if (editing) {
-        const { error } = await supabase.from("class_schedules").update(payload).eq("id", editing.id);
+        // Update existing row to the FIRST selected day.
+        const { error } = await supabase
+          .from("class_schedules")
+          .update({ ...payloadBase, day: days[0] })
+          .eq("id", editing.id);
         if (error) throw error;
-        scheduleId = editing.id;
+        scheduleIds.push(editing.id);
+        // Insert additional rows for any extra days.
+        for (const d of days.slice(1)) {
+          const { data: created, error: insErr } = await supabase
+            .from("class_schedules")
+            .insert({ ...payloadBase, day: d })
+            .select("id").single();
+          if (insErr) throw insErr;
+          scheduleIds.push(created.id);
+        }
       } else {
-        const { data: created, error } = await supabase.from("class_schedules").insert(payload).select("id").single();
-        if (error) throw error;
-        scheduleId = created.id;
+        for (const d of days) {
+          const { data: created, error } = await supabase
+            .from("class_schedules")
+            .insert({ ...payloadBase, day: d })
+            .select("id").single();
+          if (error) throw error;
+          scheduleIds.push(created.id);
+        }
       }
-      // Sync geofence links
-      const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", scheduleId);
-      if (delErr) throw delErr;
-      if (zoneIds.length > 0) {
-        const { error: insErr } = await supabase.from("schedule_geofences")
-          .insert(zoneIds.map((zid) => ({ schedule_id: scheduleId, zone_id: zid })));
-        if (insErr) throw insErr;
+
+      // Sync geofence links for every affected schedule row.
+      for (const sid of scheduleIds) {
+        const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", sid);
+        if (delErr) throw delErr;
+        if (zoneIds.length > 0) {
+          const { error: insErr } = await supabase.from("schedule_geofences")
+            .insert(zoneIds.map((zid) => ({ schedule_id: sid, zone_id: zid })));
+          if (insErr) throw insErr;
+        }
       }
     },
     onSuccess: () => {
@@ -159,6 +185,7 @@ function SchedulesPage() {
     setForm({
       subject_id: s.subject_id, teacher_id: s.teacher_id, section_id: s.section_id,
       room: s.room ?? "", day: s.day,
+      days: [s.day],
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
       academic_year_id: s.academic_year_id ?? "",
@@ -172,6 +199,13 @@ function SchedulesPage() {
 
   const toggleZone = (id: string) => {
     setZoneIds((prev) => prev.includes(id) ? prev.filter((z) => z !== id) : [...prev, id]);
+  };
+  const toggleDay = (d: Day) => {
+    setForm((f) => ({
+      ...f,
+      days: f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d],
+    }));
+    clearErr("days");
   };
 
   return (

@@ -245,12 +245,36 @@ function SchedulesPage() {
                   <FieldError message={errors.section_id} />
                 </div>
                 <div><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Rm 101" /></div>
-                <div>
-                  <Label>Day<RequiredMark /></Label>
-                  <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v as Day })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{DAYS.map((d) => <SelectItem key={d} value={d} className="capitalize">{d}</SelectItem>)}</SelectContent>
-                  </Select>
+                <div className="sm:col-span-2">
+                  <Label>Days<RequiredMark /></Label>
+                  <div
+                    className={cn(
+                      "mt-1 flex flex-wrap gap-2 rounded-md border p-2",
+                      errors.days && "border-destructive",
+                    )}
+                    role="group"
+                    aria-label="Days of the week"
+                  >
+                    {DAYS.map((d) => {
+                      const on = form.days.includes(d);
+                      return (
+                        <label
+                          key={d}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm capitalize transition",
+                            on ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted",
+                          )}
+                        >
+                          <Checkbox checked={on} onCheckedChange={() => toggleDay(d)} />
+                          {d}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Selecting multiple days creates a schedule row per day. Editing updates the current row and adds rows for any extra days.
+                  </p>
+                  <FieldError message={errors.days} />
                 </div>
                 <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
                 <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>

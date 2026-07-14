@@ -180,34 +180,25 @@ function GeofencingPage() {
                     </a>
                   ) : null}
                 </div>
-                <div
-                  className={cn(
-                    "rounded-md border p-3 text-sm",
-                    form.center_lat || form.center_lng
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-dashed bg-muted/30 text-muted-foreground",
-                  )}
-                  aria-live="polite"
-                >
-                  {form.center_lat || form.center_lng ? (
-                    <>
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                        Pinned location
-                      </p>
-                      <p className="font-mono text-xs">
-                        Latitude: <span className="font-semibold">{Number(form.center_lat).toFixed(6)}</span>
-                      </p>
-                      <p className="font-mono text-xs">
-                        Longitude: <span className="font-semibold">{Number(form.center_lng).toFixed(6)}</span>
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Radius: {form.radius_meters} m
-                      </p>
-                    </>
+                {(() => {
+                  const hasPin =
+                    Number.isFinite(form.center_lat) && Number.isFinite(form.center_lng) &&
+                    !(form.center_lat === 0 && form.center_lng === 0);
+                  return hasPin ? (
+                    <div className="overflow-hidden rounded-md border" aria-live="polite">
+                      <MapPreview
+                        lat={form.center_lat}
+                        lng={form.center_lng}
+                        radiusMeters={form.radius_meters}
+                        className="h-48 w-full"
+                      />
+                    </div>
                   ) : (
-                    <p className="text-xs">No location pinned yet. Select a location on the map.</p>
-                  )}
-                </div>
+                    <div className="rounded-md border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground" aria-live="polite">
+                      No location pinned yet. Select a location on the map.
+                    </div>
+                  );
+                })()}
                 <p className="text-xs text-muted-foreground">Click on the map to choose the geofence center.</p>
                 <div>
                   <Label>Radius (meters)<RequiredMark /></Label>

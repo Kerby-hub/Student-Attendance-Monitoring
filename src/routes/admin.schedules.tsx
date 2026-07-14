@@ -61,15 +61,17 @@ function SchedulesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
+  // When editing a grouped multi-day schedule we track the IDs of every row in
+  // the group so we can reconcile them on save/delete.
+  const [editingGroupIds, setEditingGroupIds] = useState<string[]>([]);
   const [viewStudents, setViewStudents] = useState<Schedule | null>(null);
-  const [toDelete, setToDelete] = useState<Schedule | null>(null);
+  const [toDelete, setToDelete] = useState<{ label: string; ids: string[] } | null>(null);
   const [form, setForm] = useState(empty);
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   const { data: years = [] } = useAcademicYears();
-  const { data: allSemesters = [] } = useSemesters();
   const { data: currentSemester } = useCurrentSemester();
 
 
@@ -104,30 +106,67 @@ function SchedulesPage() {
     queryFn: async () => (await supabase.from("geofence_zones").select("id, name, radius_meters").eq("active", true).order("name")).data ?? [],
   });
 
+  // Group schedule rows that share the same class + time + term + room so a
+  // multi-day schedule shows as one row with all its days.
+  const DAY_ORDER: Record<string, number> = {
+    monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+  };
+  const groups = useMemo(() => {
+    const map = new Map<string, { key: string; rows: Schedule[] }>();
+    for (const s of data) {
+      const key = [
+        s.subject_id, s.teacher_id, s.section_id, s.start_time, s.end_time,
+        s.room ?? "", s.academic_year_id ?? "", s.semester_id ?? "",
+        s.semester, s.school_year,
+      ].join("|");
+      const bucket = map.get(key) ?? { key, rows: [] };
+      bucket.rows.push(s);
+      map.set(key, bucket);
+    }
+    return Array.from(map.values()).map((g) => {
+      const rows = [...g.rows].sort((a, b) => (DAY_ORDER[a.day] ?? 99) - (DAY_ORDER[b.day] ?? 99));
+      return { key: g.key, rows, days: rows.map((r) => r.day), first: rows[0] };
+    });
+  }, [data]);
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!currentSemester && !editing) {
+        throw new Error("Please set an active Academic Year and Semester first.");
+      }
       const days = form.days.length > 0 ? form.days : [form.day];
-      // Strip `days` (client-only); insert one row per selected day.
       const { days: _drop, ...base } = form;
       const payloadBase = { ...base, room: form.room || null };
-      const scheduleIds: string[] = [];
+      const affectedIds: string[] = [];
 
-      if (editing) {
-        // Update existing row to the FIRST selected day.
-        const { error } = await supabase
-          .from("class_schedules")
-          .update({ ...payloadBase, day: days[0] })
-          .eq("id", editing.id);
-        if (error) throw error;
-        scheduleIds.push(editing.id);
-        // Insert additional rows for any extra days.
-        for (const d of days.slice(1)) {
-          const { data: created, error: insErr } = await supabase
-            .from("class_schedules")
-            .insert({ ...payloadBase, day: d })
-            .select("id").single();
-          if (insErr) throw insErr;
-          scheduleIds.push(created.id);
+      if (editing && editingGroupIds.length > 0) {
+        // Reconcile: keep the group's existing rows whose day is in the new
+        // selection (update their fields), delete rows whose day is dropped,
+        // and insert new rows for freshly-checked days.
+        const existing = data.filter((s) => editingGroupIds.includes(s.id));
+        const keepByDay = new Map<string, Schedule>();
+        const toDropIds: string[] = [];
+        for (const row of existing) {
+          if (days.includes(row.day)) keepByDay.set(row.day, row);
+          else toDropIds.push(row.id);
+        }
+        for (const [day, row] of keepByDay) {
+          const { error } = await supabase.from("class_schedules")
+            .update({ ...payloadBase, day })
+            .eq("id", row.id);
+          if (error) throw error;
+          affectedIds.push(row.id);
+        }
+        for (const d of days) {
+          if (keepByDay.has(d)) continue;
+          const { data: created, error } = await supabase.from("class_schedules")
+            .insert({ ...payloadBase, day: d }).select("id").single();
+          if (error) throw error;
+          affectedIds.push(created.id);
+        }
+        if (toDropIds.length > 0) {
+          const { error } = await supabase.from("class_schedules").delete().in("id", toDropIds);
+          if (error) throw error;
         }
       } else {
         for (const d of days) {
@@ -136,12 +175,12 @@ function SchedulesPage() {
             .insert({ ...payloadBase, day: d })
             .select("id").single();
           if (error) throw error;
-          scheduleIds.push(created.id);
+          affectedIds.push(created.id);
         }
       }
 
       // Sync geofence links for every affected schedule row.
-      for (const sid of scheduleIds) {
+      for (const sid of affectedIds) {
         const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", sid);
         if (delErr) throw delErr;
         if (zoneIds.length > 0) {
@@ -154,14 +193,14 @@ function SchedulesPage() {
     onSuccess: () => {
       toast.success(editing ? "Schedule updated" : "Schedule created");
       qc.invalidateQueries({ queryKey: ["schedules"] });
-      setOpen(false); setEditing(null); setForm(empty); setZoneIds([]);
+      setOpen(false); setEditing(null); setEditingGroupIds([]); setForm(empty); setZoneIds([]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("class_schedules").delete().eq("id", id);
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("class_schedules").delete().in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["schedules"] }); },

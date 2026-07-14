@@ -312,15 +312,22 @@ function StudentsPage() {
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
-      const msg = e.message || "Failed to create account";
-      if (/already registered|already exists|duplicate/i.test(msg)) {
+      const msg = e.message || "Failed to save student";
+      if (/STUDENT_NO_TAKEN/.test(msg)) {
+        setErrors((er) => ({ ...er, student_no: "Student ID already exists." }));
+        toast.error("Student ID already exists");
+      } else if (/TEACHER_NO_TAKEN/.test(msg)) {
+        toast.error("Teacher ID already exists");
+      } else if (/EMAIL_TAKEN/.test(msg) || /already registered|already exists|duplicate/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Email already exists." }));
         toast.error("Email already exists");
       } else if (/invalid.*email/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Invalid email address." }));
         toast.error("Invalid email");
       } else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) {
         toast.error("Password too weak");
       } else {
-        toast.error(msg);
+        toast.error(msg.replace(/^[A-Z_]+:\s*/, ""));
       }
     },
   });

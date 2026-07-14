@@ -61,10 +61,22 @@ function SubjectsPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.code.trim()) e.code = "Code is required.";
+    if (!form.name.trim()) e.name = "Name is required.";
+    if (!Number.isFinite(form.units) || form.units <= 0) e.units = "Units must be greater than 0.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  const upsert = useMutation({
+    mutationFn: async () => {
+      if (!validate()) throw new Error("VALIDATION");
       const payload = {
-        code: form.code,
-        name: form.name,
-        description: form.description || null,
+        code: form.code.trim(),
+        name: form.name.trim(),
+        description: form.description.trim() || null,
         units: form.units,
         department_id: form.department_id || null,
       };
@@ -79,10 +91,10 @@ function SubjectsPage() {
     onSuccess: () => {
       toast.success(editing ? "Subject updated" : "Subject created");
       qc.invalidateQueries({ queryKey: ["subjects"] });
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ code: "", name: "", description: "", units: 3, department_id: "" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => { if (e.message !== "VALIDATION") toast.error(e.message); },
   });
 
   const toggleArchive = useMutation({

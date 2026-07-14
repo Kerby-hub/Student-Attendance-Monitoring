@@ -180,9 +180,9 @@ function DevicesPage() {
                   <Button variant="ghost" size="icon" title={r.status === "active" ? "Disable device" : "Enable device"} onClick={() => toggleStatus.mutate(r)}>
                     {r.status === "active" ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
                   </Button>
-                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => {
-                    if (confirm(`Reset device for ${r.profile?.email}? They will be able to register a new device on next login.`)) resetDevice.mutate(r);
-                  }}>
+                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => setResetTarget(r)}>
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 </TableCell>

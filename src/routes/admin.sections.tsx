@@ -103,19 +103,36 @@ function SectionsPage() {
         title="Sections"
         description="Create class sections grouped by year level and school year."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setErrors({}); }}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New section</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editing ? "Edit section" : "New section"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Label>Section name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="BSCS 1-A" /></div>
+                <div className="sm:col-span-2">
+                  <Label>Section name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.name} aria-invalid={!!errors.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors((er) => { const n = { ...er }; delete n.name; return n; }); }}
+                    placeholder="BSCS 1-A" />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+                </div>
                 <div><Label>Program</Label><Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} placeholder="BSCS" /></div>
-                <div><Label>Year level</Label><Input type="number" min={1} max={10} value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} /></div>
-                <div className="sm:col-span-2"><Label>School year</Label><Input value={form.school_year} onChange={(e) => setForm({ ...form, school_year: e.target.value })} placeholder="2025-2026" /></div>
+                <div>
+                  <Label>Year level<span className="text-destructive"> *</span></Label>
+                  <Input type="number" min={1} max={10} value={form.year_level} aria-invalid={!!errors.year_level}
+                    onChange={(e) => { setForm({ ...form, year_level: Number(e.target.value) }); if (errors.year_level) setErrors((er) => { const n = { ...er }; delete n.year_level; return n; }); }} />
+                  {errors.year_level && <p className="mt-1 text-xs text-destructive">{errors.year_level}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>School year<span className="text-destructive"> *</span></Label>
+                  <Input value={form.school_year} aria-invalid={!!errors.school_year}
+                    onChange={(e) => { setForm({ ...form, school_year: e.target.value }); if (errors.school_year) setErrors((er) => { const n = { ...er }; delete n.school_year; return n; }); }}
+                    placeholder="2025-2026" />
+                  {errors.school_year && <p className="mt-1 text-xs text-destructive">{errors.school_year}</p>}
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.name || !form.school_year || upsert.isPending}>{editing ? "Save" : "Create"}</Button>
+                <Button onClick={() => upsert.mutate()} disabled={upsert.isPending}>{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

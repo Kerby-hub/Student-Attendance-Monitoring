@@ -146,7 +146,7 @@ export function CollapsibleNavGroup({
           "group-data-[collapsible=icon]:!max-h-none group-data-[collapsible=icon]:!opacity-100",
         )}
       >
-        <SidebarMenu>
+        <SidebarMenu className="ml-3 border-l border-sidebar-border/60 pl-2 group-data-[collapsible=icon]:ml-0 group-data-[collapsible=icon]:border-l-0 group-data-[collapsible=icon]:pl-0">
           {group.items.map((item) => {
             const active = isItemActive(pathname, item);
             return (

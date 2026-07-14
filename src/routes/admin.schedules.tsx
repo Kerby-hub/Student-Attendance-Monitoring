@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
-import { useAcademicYears, useSemesters, useCurrentSemester } from "@/lib/academic/hooks";
+import { useAcademicYears, useCurrentSemester } from "@/lib/academic/hooks";
 
 
 export const Route = createFileRoute("/admin/schedules")({
@@ -61,15 +61,17 @@ function SchedulesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
+  // When editing a grouped multi-day schedule we track the IDs of every row in
+  // the group so we can reconcile them on save/delete.
+  const [editingGroupIds, setEditingGroupIds] = useState<string[]>([]);
   const [viewStudents, setViewStudents] = useState<Schedule | null>(null);
-  const [toDelete, setToDelete] = useState<Schedule | null>(null);
+  const [toDelete, setToDelete] = useState<{ label: string; ids: string[] } | null>(null);
   const [form, setForm] = useState(empty);
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   const { data: years = [] } = useAcademicYears();
-  const { data: allSemesters = [] } = useSemesters();
   const { data: currentSemester } = useCurrentSemester();
 
 
@@ -104,30 +106,67 @@ function SchedulesPage() {
     queryFn: async () => (await supabase.from("geofence_zones").select("id, name, radius_meters").eq("active", true).order("name")).data ?? [],
   });
 
+  // Group schedule rows that share the same class + time + term + room so a
+  // multi-day schedule shows as one row with all its days.
+  const DAY_ORDER: Record<string, number> = {
+    monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+  };
+  const groups = useMemo(() => {
+    const map = new Map<string, { key: string; rows: Schedule[] }>();
+    for (const s of data) {
+      const key = [
+        s.subject_id, s.teacher_id, s.section_id, s.start_time, s.end_time,
+        s.room ?? "", s.academic_year_id ?? "", s.semester_id ?? "",
+        s.semester, s.school_year,
+      ].join("|");
+      const bucket = map.get(key) ?? { key, rows: [] };
+      bucket.rows.push(s);
+      map.set(key, bucket);
+    }
+    return Array.from(map.values()).map((g) => {
+      const rows = [...g.rows].sort((a, b) => (DAY_ORDER[a.day] ?? 99) - (DAY_ORDER[b.day] ?? 99));
+      return { key: g.key, rows, days: rows.map((r) => r.day), first: rows[0] };
+    });
+  }, [data]);
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!currentSemester && !editing) {
+        throw new Error("Please set an active Academic Year and Semester first.");
+      }
       const days = form.days.length > 0 ? form.days : [form.day];
-      // Strip `days` (client-only); insert one row per selected day.
       const { days: _drop, ...base } = form;
       const payloadBase = { ...base, room: form.room || null };
-      const scheduleIds: string[] = [];
+      const affectedIds: string[] = [];
 
-      if (editing) {
-        // Update existing row to the FIRST selected day.
-        const { error } = await supabase
-          .from("class_schedules")
-          .update({ ...payloadBase, day: days[0] })
-          .eq("id", editing.id);
-        if (error) throw error;
-        scheduleIds.push(editing.id);
-        // Insert additional rows for any extra days.
-        for (const d of days.slice(1)) {
-          const { data: created, error: insErr } = await supabase
-            .from("class_schedules")
-            .insert({ ...payloadBase, day: d })
-            .select("id").single();
-          if (insErr) throw insErr;
-          scheduleIds.push(created.id);
+      if (editing && editingGroupIds.length > 0) {
+        // Reconcile: keep the group's existing rows whose day is in the new
+        // selection (update their fields), delete rows whose day is dropped,
+        // and insert new rows for freshly-checked days.
+        const existing = data.filter((s) => editingGroupIds.includes(s.id));
+        const keepByDay = new Map<string, Schedule>();
+        const toDropIds: string[] = [];
+        for (const row of existing) {
+          if (days.includes(row.day)) keepByDay.set(row.day, row);
+          else toDropIds.push(row.id);
+        }
+        for (const [day, row] of keepByDay) {
+          const { error } = await supabase.from("class_schedules")
+            .update({ ...payloadBase, day: day as Day })
+            .eq("id", row.id);
+          if (error) throw error;
+          affectedIds.push(row.id);
+        }
+        for (const d of days) {
+          if (keepByDay.has(d)) continue;
+          const { data: created, error } = await supabase.from("class_schedules")
+            .insert({ ...payloadBase, day: d }).select("id").single();
+          if (error) throw error;
+          affectedIds.push(created.id);
+        }
+        if (toDropIds.length > 0) {
+          const { error } = await supabase.from("class_schedules").delete().in("id", toDropIds);
+          if (error) throw error;
         }
       } else {
         for (const d of days) {
@@ -136,12 +175,12 @@ function SchedulesPage() {
             .insert({ ...payloadBase, day: d })
             .select("id").single();
           if (error) throw error;
-          scheduleIds.push(created.id);
+          affectedIds.push(created.id);
         }
       }
 
       // Sync geofence links for every affected schedule row.
-      for (const sid of scheduleIds) {
+      for (const sid of affectedIds) {
         const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", sid);
         if (delErr) throw delErr;
         if (zoneIds.length > 0) {
@@ -154,14 +193,14 @@ function SchedulesPage() {
     onSuccess: () => {
       toast.success(editing ? "Schedule updated" : "Schedule created");
       qc.invalidateQueries({ queryKey: ["schedules"] });
-      setOpen(false); setEditing(null); setForm(empty); setZoneIds([]);
+      setOpen(false); setEditing(null); setEditingGroupIds([]); setForm(empty); setZoneIds([]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("class_schedules").delete().eq("id", id);
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("class_schedules").delete().in("id", ids);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["schedules"] }); },
@@ -169,7 +208,7 @@ function SchedulesPage() {
   });
 
   const openCreate = () => {
-    setEditing(null);
+    setEditing(null); setEditingGroupIds([]);
     const currentYear = years.find((y) => y.id === currentSemester?.academic_year_id);
     setForm({
       ...empty,
@@ -180,19 +219,25 @@ function SchedulesPage() {
     });
     setZoneIds([]); setErrors({}); setOpen(true);
   };
-  const openEdit = (s: Schedule) => {
+  const openEditGroup = (rows: Schedule[]) => {
+    const s = rows[0];
     setEditing(s);
+    setEditingGroupIds(rows.map((r) => r.id));
     setForm({
       subject_id: s.subject_id, teacher_id: s.teacher_id, section_id: s.section_id,
       room: s.room ?? "", day: s.day,
-      days: [s.day],
+      days: rows.map((r) => r.day),
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
       academic_year_id: s.academic_year_id ?? "",
       semester_id: s.semester_id ?? "",
     });
-    setZoneIds(s.schedule_geofences?.map((g) => g.zone_id) ?? []);
-    setOpen(true);
+    // Zones are stored per row; take the union across the group so the edit
+    // form reflects everything the group currently has assigned.
+    const zoneSet = new Set<string>();
+    for (const r of rows) r.schedule_geofences?.forEach((g) => zoneSet.add(g.zone_id));
+    setZoneIds(Array.from(zoneSet));
+    setErrors({}); setOpen(true);
   };
 
   useEffect(() => { if (!open) { setZoneIds([]); } }, [open]);
@@ -278,35 +323,28 @@ function SchedulesPage() {
                 </div>
                 <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
                 <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>
-                <div>
-                  <Label>Academic year<RequiredMark /></Label>
-                  <Select value={form.academic_year_id} onValueChange={(v) => { setForm({ ...form, academic_year_id: v, semester_id: "" }); clearErr("academic_year_id"); }}>
-                    <SelectTrigger className={cn(errors.academic_year_id && invalidInputClass)}><SelectValue placeholder="Select academic year" /></SelectTrigger>
-                    <SelectContent>{years.map((y) => <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FieldError message={errors.academic_year_id} />
-                </div>
-                <div>
-                  <Label>Semester<RequiredMark /></Label>
-                  <Select value={form.semester_id} onValueChange={(v) => {
-                    const sem = allSemesters.find((s) => s.id === v);
-                    setForm({
-                      ...form,
-                      semester_id: v,
-                      academic_year_id: sem?.academic_year_id ?? form.academic_year_id,
-                      semester: sem?.name ?? form.semester,
-                      school_year: years.find((y) => y.id === (sem?.academic_year_id ?? form.academic_year_id))?.name ?? form.school_year,
-                    });
-                    clearErr("semester_id");
-                  }}>
-                    <SelectTrigger className={cn(errors.semester_id && invalidInputClass)}><SelectValue placeholder="Select semester" /></SelectTrigger>
-                    <SelectContent>
-                      {allSemesters
-                        .filter((s) => !form.academic_year_id || s.academic_year_id === form.academic_year_id)
-                        .map((s) => <SelectItem key={s.id} value={s.id}>{s.name}{s.status !== "active" ? ` (${s.status})` : ""}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={errors.semester_id} />
+                <div className="sm:col-span-2">
+                  <Label>Academic year &amp; semester</Label>
+                  {currentSemester ? (
+                    <div className="mt-1 rounded-md border bg-muted/30 p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="uppercase">Active</Badge>
+                        <span className="font-medium">
+                          {years.find((y) => y.id === currentSemester.academic_year_id)?.name ?? form.school_year}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="font-medium">{currentSemester.name}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Schedules are saved under the currently active academic year and semester. Change the active period from <strong>Academic Management</strong>.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                      Please set an active Academic Year and Semester first.
+                    </div>
+                  )}
+                  {errors.semester_id ? <FieldError message={errors.semester_id} /> : null}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -374,9 +412,16 @@ function SchedulesPage() {
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : data.length === 0 ? (
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
-            ) : data.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="capitalize">{s.day}</TableCell>
+            ) : groups.map((g) => {
+              const s = g.first;
+              const label = `${s.subjects?.code ?? ""} · ${s.sections?.name ?? ""}`;
+              return (
+              <TableRow key={g.key}>
+                <TableCell className="capitalize">
+                  {g.days.length > 1
+                    ? g.days.map((d) => d[0].toUpperCase() + d.slice(1)).join(", ")
+                    : g.days[0]}
+                </TableCell>
                 <TableCell className="font-mono text-xs">{s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</TableCell>
                 <TableCell>
                   <div className="font-mono text-xs">{s.subjects?.code}</div>
@@ -388,9 +433,9 @@ function SchedulesPage() {
                 <TableCell>
                   {s.schedule_geofences && s.schedule_geofences.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {s.schedule_geofences.slice(0, 2).map((g) => (
-                        <Badge key={g.zone_id} variant="outline" className="text-xs">
-                          <MapPin className="mr-1 h-3 w-3" />{g.geofence_zones?.name ?? "—"}
+                      {s.schedule_geofences.slice(0, 2).map((z) => (
+                        <Badge key={z.zone_id} variant="outline" className="text-xs">
+                          <MapPin className="mr-1 h-3 w-3" />{z.geofence_zones?.name ?? "—"}
                         </Badge>
                       ))}
                       {s.schedule_geofences.length > 2 && <Badge variant="outline" className="text-xs">+{s.schedule_geofences.length - 2}</Badge>}
@@ -402,11 +447,12 @@ function SchedulesPage() {
                 <TableCell className="text-xs text-muted-foreground">{s.semester} · {s.school_year}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" title="View students" onClick={() => setViewStudents(s)}><Users className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => openEditGroup(g.rows)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete({ label, ids: g.rows.map((r) => r.id) })}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -415,11 +461,11 @@ function SchedulesPage() {
         open={!!toDelete}
         onOpenChange={(v) => { if (!v) setToDelete(null); }}
         title="Delete this schedule?"
-        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.subjects?.code} · {toDelete?.sections?.name}</span>? Historical attendance sessions will remain, but this schedule cannot be recovered.</>}
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.label}</span>? {toDelete && toDelete.ids.length > 1 ? `All ${toDelete.ids.length} day rows for this schedule will be removed. ` : ""}Historical attendance sessions will remain, but this schedule cannot be recovered.</>}
         confirmLabel="Delete"
         loading={remove.isPending}
         loadingLabel="Deleting…"
-        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.ids, { onSettled: () => setToDelete(null) }); }}
       />
     </div>
   );

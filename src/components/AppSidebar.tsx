@@ -32,6 +32,7 @@ const groups: NavGroup[] = [
   {
     label: "Academic", icon: BookMarked,
     items: [
+      { title: "Academic Management", url: "/admin/academic", icon: CalendarDays },
       { title: "Departments", url: "/admin/departments", icon: Building2 },
       { title: "Classes", url: "/admin/sections", icon: Layers },
       { title: "Subjects", url: "/admin/subjects", icon: BookOpen },

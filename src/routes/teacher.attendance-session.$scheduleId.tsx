@@ -61,7 +61,8 @@ function AttendanceSessionPage() {
         .from("class_schedules")
         .select(`*,
           subjects:subjects!class_schedules_subject_id_fkey(code,name),
-          sections:sections!class_schedules_section_id_fkey(name, id)`)
+          sections:sections!class_schedules_section_id_fkey(name, id),
+          semesters:semesters!class_schedules_semester_id_fkey(id, name, status, is_current)`)
         .eq("id", scheduleId)
         .single();
       if (error) throw error;
@@ -170,7 +171,14 @@ function AttendanceSessionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id, session?.status, rotationSecs, sessionEnded]);
 
+  const semesterStatus: string | undefined = schedule?.semesters?.status;
+  const semesterClosed = semesterStatus === "closed" || semesterStatus === "archived";
+
   const startSession = async () => {
+    if (semesterClosed) {
+      toast.error("This semester is already closed. New attendance sessions cannot be started.");
+      return;
+    }
     // Refuse to start a session that is already past its scheduled end.
     const end = scheduleEndDate(schedule?.end_time, null);
     if (end && Date.now() > end.getTime()) {
@@ -215,8 +223,15 @@ function AttendanceSessionPage() {
         description={schedule ? `Section ${schedule.sections?.name} • Room ${schedule.room ?? "TBA"} • ${schedule.start_time?.slice(0,5)}–${schedule.end_time?.slice(0,5)}` : ""}
         action={session?.status === "open" && !sessionEnded
           ? <Button variant="destructive" onClick={closeSession}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
-          : <Button onClick={startSession} disabled={sessionEnded || session?.status === "closed"}>Start session</Button>}
+          : <Button onClick={startSession} disabled={sessionEnded || session?.status === "closed" || semesterClosed}>Start session</Button>}
       />
+
+      {semesterClosed && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <p className="font-semibold">Semester is closed</p>
+          <p className="text-muted-foreground">This schedule belongs to a closed semester. New attendance sessions cannot be started.</p>
+        </div>
+      )}
 
       {sessionEnded && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">

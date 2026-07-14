@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
+import { useAcademicYears, useSemesters, useCurrentSemester } from "@/lib/academic/hooks";
 
 
 export const Route = createFileRoute("/admin/schedules")({
@@ -37,6 +38,8 @@ type Schedule = {
   day: Day;
   start_time: string; end_time: string;
   semester: string; school_year: string;
+  academic_year_id: string | null;
+  semester_id: string | null;
   subjects?: { code: string; name: string } | null;
   teachers?: { full_name: string } | null;
   sections?: { name: string } | null;
@@ -48,6 +51,8 @@ const empty = {
   room: "", day: "monday" as Day,
   start_time: "08:00", end_time: "09:00",
   semester: "1st", school_year: "2025-2026",
+  academic_year_id: "" as string,
+  semester_id: "" as string,
 };
 
 function SchedulesPage() {
@@ -59,6 +64,10 @@ function SchedulesPage() {
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+
+  const { data: years = [] } = useAcademicYears();
+  const { data: allSemesters = [] } = useSemesters();
+  const { data: currentSemester } = useCurrentSemester();
 
 
   const { data = [], isLoading } = useQuery({
@@ -131,7 +140,18 @@ function SchedulesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openCreate = () => { setEditing(null); setForm(empty); setZoneIds([]); setOpen(true); };
+  const openCreate = () => {
+    setEditing(null);
+    const currentYear = years.find((y) => y.id === currentSemester?.academic_year_id);
+    setForm({
+      ...empty,
+      academic_year_id: currentSemester?.academic_year_id ?? "",
+      semester_id: currentSemester?.id ?? "",
+      semester: currentSemester?.name ?? empty.semester,
+      school_year: currentYear?.name ?? empty.school_year,
+    });
+    setZoneIds([]); setErrors({}); setOpen(true);
+  };
   const openEdit = (s: Schedule) => {
     setEditing(s);
     setForm({
@@ -139,6 +159,8 @@ function SchedulesPage() {
       room: s.room ?? "", day: s.day,
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
+      academic_year_id: s.academic_year_id ?? "",
+      semester_id: s.semester_id ?? "",
     });
     setZoneIds(s.schedule_geofences?.map((g) => g.zone_id) ?? []);
     setOpen(true);
@@ -196,8 +218,36 @@ function SchedulesPage() {
                 </div>
                 <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
                 <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>
-                <div><Label>Semester<RequiredMark /></Label><Input value={form.semester} className={cn(errors.semester && invalidInputClass)} onChange={(e) => { setForm({ ...form, semester: e.target.value }); clearErr("semester"); }} placeholder="1st" /><FieldError message={errors.semester} /></div>
-                <div><Label>School year<RequiredMark /></Label><Input value={form.school_year} className={cn(errors.school_year && invalidInputClass)} onChange={(e) => { setForm({ ...form, school_year: e.target.value }); clearErr("school_year"); }} placeholder="2025-2026" /><FieldError message={errors.school_year} /></div>
+                <div>
+                  <Label>Academic year<RequiredMark /></Label>
+                  <Select value={form.academic_year_id} onValueChange={(v) => { setForm({ ...form, academic_year_id: v, semester_id: "" }); clearErr("academic_year_id"); }}>
+                    <SelectTrigger className={cn(errors.academic_year_id && invalidInputClass)}><SelectValue placeholder="Select academic year" /></SelectTrigger>
+                    <SelectContent>{years.map((y) => <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <FieldError message={errors.academic_year_id} />
+                </div>
+                <div>
+                  <Label>Semester<RequiredMark /></Label>
+                  <Select value={form.semester_id} onValueChange={(v) => {
+                    const sem = allSemesters.find((s) => s.id === v);
+                    setForm({
+                      ...form,
+                      semester_id: v,
+                      academic_year_id: sem?.academic_year_id ?? form.academic_year_id,
+                      semester: sem?.name ?? form.semester,
+                      school_year: years.find((y) => y.id === (sem?.academic_year_id ?? form.academic_year_id))?.name ?? form.school_year,
+                    });
+                    clearErr("semester_id");
+                  }}>
+                    <SelectTrigger className={cn(errors.semester_id && invalidInputClass)}><SelectValue placeholder="Select semester" /></SelectTrigger>
+                    <SelectContent>
+                      {allSemesters
+                        .filter((s) => !form.academic_year_id || s.academic_year_id === form.academic_year_id)
+                        .map((s) => <SelectItem key={s.id} value={s.id}>{s.name}{s.status !== "active" ? ` (${s.status})` : ""}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FieldError message={errors.semester_id} />
+                </div>
 
                 <div className="sm:col-span-2">
                   <Label className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Allowed geofence zones</Label>
@@ -234,6 +284,8 @@ function SchedulesPage() {
                     if (form.start_time && form.end_time && form.end_time <= form.start_time) errs.end_time = "End time must be after start time.";
                     if (!form.semester.trim()) errs.semester = "Semester is required.";
                     if (!form.school_year.trim()) errs.school_year = "School year is required.";
+                    if (!form.academic_year_id) errs.academic_year_id = "Academic year is required.";
+                    if (!form.semester_id) errs.semester_id = "Semester is required.";
                     setErrors(errs);
                     if (Object.keys(errs).length === 0) upsert.mutate();
                   }}

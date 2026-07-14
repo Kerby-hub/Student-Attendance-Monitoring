@@ -22,6 +22,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/calendar")({
@@ -346,7 +347,8 @@ function EventFormDialog({
   const [startTime, setStartTime] = useState(start.time);
   const [endDate, setEndDate] = useState(end.date);
   const [endTime, setEndTime] = useState(end.time);
-  const [err, setErr] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   // Reset when initial changes / dialog reopens
   useMemo(() => {
@@ -358,17 +360,27 @@ function EventFormDialog({
     setLocation(initial?.location ?? "");
     const s = initial?.starts_at ? toLocalParts(initial.starts_at) : { date: ymd(new Date()), time: "09:00" };
     const e = initial?.ends_at ? toLocalParts(initial.ends_at) : { date: s.date, time: "10:00" };
-    setDate(s.date); setStartTime(s.time); setEndDate(e.date); setEndTime(e.time); setErr(null);
+    setDate(s.date); setStartTime(s.time); setEndDate(e.date); setEndTime(e.time); setErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial?.id]);
 
   const submit = () => {
-    if (!title.trim()) return setErr("Title is required.");
-    if (!date) return setErr("Date is required.");
-    const startsIso = combineDateTime(date, startTime);
-    const endsIso = combineDateTime(endDate || date, endTime);
-    if (new Date(endsIso) <= new Date(startsIso)) return setErr("End time must be after start time.");
-    setErr(null);
+    if (submitting) return; // guard against double-submit
+    const errs: Record<string, string> = {};
+    if (!title.trim()) errs.title = "Event title is required.";
+    if (!date) errs.date = "Start date is required.";
+    const startsIso = date ? combineDateTime(date, startTime) : "";
+    const endsIso = date ? combineDateTime(endDate || date, endTime) : "";
+    if (startsIso && endsIso && new Date(endsIso) <= new Date(startsIso)) {
+      errs.end_time = "End time must be after start time.";
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      // focus first invalid
+      const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+      first?.focus();
+      return;
+    }
     onSubmit({
       title: title.trim(), description: description.trim(),
       audience, event_type: eventType, location: location.trim(),
@@ -385,14 +397,21 @@ function EventFormDialog({
         </DialogHeader>
         <div className="grid gap-3">
           <div>
-            <Label>Title *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Midterm exam" />
+            <Label>Title<RequiredMark /></Label>
+            <Input
+              value={title}
+              aria-invalid={!!errors.title}
+              className={cn(errors.title && invalidInputClass)}
+              onChange={(e) => { setTitle(e.target.value); clearErr("title"); }}
+              placeholder="Midterm exam"
+            />
+            <FieldError message={errors.title} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Type</Label>
               <Select value={eventType} onValueChange={setEventType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
                   {EVENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
@@ -401,7 +420,7 @@ function EventFormDialog({
             <div>
               <Label>Audience</Label>
               <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Everyone</SelectItem>
                   <SelectItem value="teachers">Teachers</SelectItem>
@@ -412,8 +431,15 @@ function EventFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Start date *</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Label>Start date<RequiredMark /></Label>
+              <Input
+                type="date"
+                value={date}
+                aria-invalid={!!errors.date}
+                className={cn(errors.date && invalidInputClass)}
+                onChange={(e) => { setDate(e.target.value); clearErr("date"); }}
+              />
+              <FieldError message={errors.date} />
             </div>
             <div>
               <Label>Start time</Label>
@@ -425,7 +451,14 @@ function EventFormDialog({
             </div>
             <div>
               <Label>End time</Label>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              <Input
+                type="time"
+                value={endTime}
+                aria-invalid={!!errors.end_time}
+                className={cn(errors.end_time && invalidInputClass)}
+                onChange={(e) => { setEndTime(e.target.value); clearErr("end_time"); }}
+              />
+              <FieldError message={errors.end_time} />
             </div>
           </div>
           <div>
@@ -436,10 +469,9 @@ function EventFormDialog({
             <Label>Description</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          {err && <p className="text-sm text-destructive">{err}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
           <Button onClick={submit} disabled={submitting}>{submitting ? "Saving…" : "Save event"}</Button>
         </DialogFooter>
       </DialogContent>

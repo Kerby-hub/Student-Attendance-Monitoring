@@ -43,6 +43,7 @@ function TeachersPage() {
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Teacher | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Teacher | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("active");
   const [search, setSearch] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -359,14 +360,19 @@ function TeachersPage() {
                     {t.status === "active" ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" title={t.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
-                      if (t.status === "active") setDeactivateTarget(t);
-                      else toggleStatus.mutate(t);
-                    }}>
-                      {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                    </Button>
+                    {t.status === "active" ? (
+                      <>
+                        <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" title="Deactivate" onClick={() => setDeactivateTarget(t)}>
+                          <UserX className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" size="sm" title="Restore" onClick={() => setRestoreTarget(t)}>
+                        <UserCheck className="mr-1 h-4 w-4" /> Restore
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ));
@@ -386,6 +392,18 @@ function TeachersPage() {
         loading={toggleStatus.isPending}
         loadingLabel="Deactivating…"
         onConfirm={() => { if (deactivateTarget) { const t = deactivateTarget; toggleStatus.mutate(t, { onSettled: () => setDeactivateTarget(null) }); } }}
+      />
+
+      <ConfirmDialog
+        open={!!restoreTarget}
+        onOpenChange={(v) => { if (!v) setRestoreTarget(null); }}
+        title="Restore Teacher Account?"
+        description={<>Are you sure you want to restore this teacher account? The teacher will be able to access the system again after restoration.</>}
+        confirmLabel="Restore"
+        destructive={false}
+        loading={toggleStatus.isPending}
+        loadingLabel="Restoring…"
+        onConfirm={() => { if (restoreTarget) { const t = restoreTarget; toggleStatus.mutate(t, { onSettled: () => setRestoreTarget(null) }); } }}
       />
     </div>
   );

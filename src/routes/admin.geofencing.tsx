@@ -179,6 +179,34 @@ function GeofencingPage() {
                     </a>
                   ) : null}
                 </div>
+                <div
+                  className={cn(
+                    "rounded-md border p-3 text-sm",
+                    form.center_lat || form.center_lng
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-dashed bg-muted/30 text-muted-foreground",
+                  )}
+                  aria-live="polite"
+                >
+                  {form.center_lat || form.center_lng ? (
+                    <>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                        Pinned location
+                      </p>
+                      <p className="font-mono text-xs">
+                        Latitude: <span className="font-semibold">{Number(form.center_lat).toFixed(6)}</span>
+                      </p>
+                      <p className="font-mono text-xs">
+                        Longitude: <span className="font-semibold">{Number(form.center_lng).toFixed(6)}</span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Radius: {form.radius_meters} m
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs">No location pinned yet. Select a location on the map.</p>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">Click on the map to choose the geofence center.</p>
                 <div>
                   <Label>Radius (meters)<RequiredMark /></Label>

@@ -50,6 +50,7 @@ type Schedule = {
 const empty = {
   subject_id: "", teacher_id: "", section_id: "",
   room: "", day: "monday" as Day,
+  days: ["monday"] as Day[],
   start_time: "08:00", end_time: "09:00",
   semester: "1st", school_year: "2025-2026",
   academic_year_id: "" as string,
@@ -105,24 +106,49 @@ function SchedulesPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, room: form.room || null };
-      let scheduleId: string;
+      const days = form.days.length > 0 ? form.days : [form.day];
+      // Strip `days` (client-only); insert one row per selected day.
+      const { days: _drop, ...base } = form;
+      const payloadBase = { ...base, room: form.room || null };
+      const scheduleIds: string[] = [];
+
       if (editing) {
-        const { error } = await supabase.from("class_schedules").update(payload).eq("id", editing.id);
+        // Update existing row to the FIRST selected day.
+        const { error } = await supabase
+          .from("class_schedules")
+          .update({ ...payloadBase, day: days[0] })
+          .eq("id", editing.id);
         if (error) throw error;
-        scheduleId = editing.id;
+        scheduleIds.push(editing.id);
+        // Insert additional rows for any extra days.
+        for (const d of days.slice(1)) {
+          const { data: created, error: insErr } = await supabase
+            .from("class_schedules")
+            .insert({ ...payloadBase, day: d })
+            .select("id").single();
+          if (insErr) throw insErr;
+          scheduleIds.push(created.id);
+        }
       } else {
-        const { data: created, error } = await supabase.from("class_schedules").insert(payload).select("id").single();
-        if (error) throw error;
-        scheduleId = created.id;
+        for (const d of days) {
+          const { data: created, error } = await supabase
+            .from("class_schedules")
+            .insert({ ...payloadBase, day: d })
+            .select("id").single();
+          if (error) throw error;
+          scheduleIds.push(created.id);
+        }
       }
-      // Sync geofence links
-      const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", scheduleId);
-      if (delErr) throw delErr;
-      if (zoneIds.length > 0) {
-        const { error: insErr } = await supabase.from("schedule_geofences")
-          .insert(zoneIds.map((zid) => ({ schedule_id: scheduleId, zone_id: zid })));
-        if (insErr) throw insErr;
+
+      // Sync geofence links for every affected schedule row.
+      for (const sid of scheduleIds) {
+        const { error: delErr } = await supabase.from("schedule_geofences").delete().eq("schedule_id", sid);
+        if (delErr) throw delErr;
+        if (zoneIds.length > 0) {
+          const { error: insErr } = await supabase.from("schedule_geofences")
+            .insert(zoneIds.map((zid) => ({ schedule_id: sid, zone_id: zid })));
+          if (insErr) throw insErr;
+        }
       }
     },
     onSuccess: () => {
@@ -159,6 +185,7 @@ function SchedulesPage() {
     setForm({
       subject_id: s.subject_id, teacher_id: s.teacher_id, section_id: s.section_id,
       room: s.room ?? "", day: s.day,
+      days: [s.day],
       start_time: s.start_time.slice(0,5), end_time: s.end_time.slice(0,5),
       semester: s.semester, school_year: s.school_year,
       academic_year_id: s.academic_year_id ?? "",
@@ -172,6 +199,13 @@ function SchedulesPage() {
 
   const toggleZone = (id: string) => {
     setZoneIds((prev) => prev.includes(id) ? prev.filter((z) => z !== id) : [...prev, id]);
+  };
+  const toggleDay = (d: Day) => {
+    setForm((f) => ({
+      ...f,
+      days: f.days.includes(d) ? f.days.filter((x) => x !== d) : [...f.days, d],
+    }));
+    clearErr("days");
   };
 
   return (
@@ -211,12 +245,36 @@ function SchedulesPage() {
                   <FieldError message={errors.section_id} />
                 </div>
                 <div><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Rm 101" /></div>
-                <div>
-                  <Label>Day<RequiredMark /></Label>
-                  <Select value={form.day} onValueChange={(v) => setForm({ ...form, day: v as Day })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{DAYS.map((d) => <SelectItem key={d} value={d} className="capitalize">{d}</SelectItem>)}</SelectContent>
-                  </Select>
+                <div className="sm:col-span-2">
+                  <Label>Days<RequiredMark /></Label>
+                  <div
+                    className={cn(
+                      "mt-1 flex flex-wrap gap-2 rounded-md border p-2",
+                      errors.days && "border-destructive",
+                    )}
+                    role="group"
+                    aria-label="Days of the week"
+                  >
+                    {DAYS.map((d) => {
+                      const on = form.days.includes(d);
+                      return (
+                        <label
+                          key={d}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm capitalize transition",
+                            on ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted",
+                          )}
+                        >
+                          <Checkbox checked={on} onCheckedChange={() => toggleDay(d)} />
+                          {d}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Selecting multiple days creates a schedule row per day. Editing updates the current row and adds rows for any extra days.
+                  </p>
+                  <FieldError message={errors.days} />
                 </div>
                 <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
                 <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>
@@ -288,11 +346,12 @@ function SchedulesPage() {
                     if (!form.school_year.trim()) errs.school_year = "School year is required.";
                     if (!form.academic_year_id) errs.academic_year_id = "Academic year is required.";
                     if (!form.semester_id) errs.semester_id = "Semester is required.";
+                    if (!form.days || form.days.length === 0) errs.days = "Please select at least one day.";
                     setErrors(errs);
-                    if (Object.keys(errs).length === 0) upsert.mutate();
+                    if (Object.keys(errs).length === 0 && !upsert.isPending) upsert.mutate();
                   }}
                   disabled={upsert.isPending}
-                >{editing ? "Save" : "Create"}</Button>
+                >{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>
               </DialogFooter>
 
             </DialogContent>

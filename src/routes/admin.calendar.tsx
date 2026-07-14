@@ -443,6 +443,7 @@ function EventFormDialog({
               <Input
                 type="date"
                 value={date}
+                min={initial?.id && initialDate < ymd(new Date()) ? undefined : ymd(new Date())}
                 aria-invalid={!!errors.date}
                 className={cn(errors.date && invalidInputClass)}
                 onChange={(e) => { setDate(e.target.value); clearErr("date"); }}

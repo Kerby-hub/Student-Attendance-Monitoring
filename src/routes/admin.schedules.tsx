@@ -346,11 +346,12 @@ function SchedulesPage() {
                     if (!form.school_year.trim()) errs.school_year = "School year is required.";
                     if (!form.academic_year_id) errs.academic_year_id = "Academic year is required.";
                     if (!form.semester_id) errs.semester_id = "Semester is required.";
+                    if (!form.days || form.days.length === 0) errs.days = "Please select at least one day.";
                     setErrors(errs);
-                    if (Object.keys(errs).length === 0) upsert.mutate();
+                    if (Object.keys(errs).length === 0 && !upsert.isPending) upsert.mutate();
                   }}
                   disabled={upsert.isPending}
-                >{editing ? "Save" : "Create"}</Button>
+                >{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>
               </DialogFooter>
 
             </DialogContent>

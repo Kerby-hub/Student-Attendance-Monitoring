@@ -376,6 +376,17 @@ function TeachersPage() {
       </div>
 
       <AssignmentsDialog teacher={assignFor} onClose={() => setAssignFor(null)} />
+
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onOpenChange={(v) => { if (!v) setDeactivateTarget(null); }}
+        title="Deactivate teacher?"
+        description={<>Are you sure you want to deactivate <span className="font-medium">{deactivateTarget?.full_name}</span>? They will no longer be able to access the system. Historical records will be preserved.</>}
+        confirmLabel="Deactivate"
+        loading={toggleStatus.isPending}
+        loadingLabel="Deactivating…"
+        onConfirm={() => { if (deactivateTarget) { const t = deactivateTarget; toggleStatus.mutate(t, { onSettled: () => setDeactivateTarget(null) }); } }}
+      />
     </div>
   );
 }

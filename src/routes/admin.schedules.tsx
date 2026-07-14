@@ -406,9 +406,16 @@ function SchedulesPage() {
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : data.length === 0 ? (
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
-            ) : data.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="capitalize">{s.day}</TableCell>
+            ) : groups.map((g) => {
+              const s = g.first;
+              const label = `${s.subjects?.code ?? ""} · ${s.sections?.name ?? ""}`;
+              return (
+              <TableRow key={g.key}>
+                <TableCell className="capitalize">
+                  {g.days.length > 1
+                    ? g.days.map((d) => d[0].toUpperCase() + d.slice(1)).join(", ")
+                    : g.days[0]}
+                </TableCell>
                 <TableCell className="font-mono text-xs">{s.start_time.slice(0,5)}–{s.end_time.slice(0,5)}</TableCell>
                 <TableCell>
                   <div className="font-mono text-xs">{s.subjects?.code}</div>
@@ -420,9 +427,9 @@ function SchedulesPage() {
                 <TableCell>
                   {s.schedule_geofences && s.schedule_geofences.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {s.schedule_geofences.slice(0, 2).map((g) => (
-                        <Badge key={g.zone_id} variant="outline" className="text-xs">
-                          <MapPin className="mr-1 h-3 w-3" />{g.geofence_zones?.name ?? "—"}
+                      {s.schedule_geofences.slice(0, 2).map((z) => (
+                        <Badge key={z.zone_id} variant="outline" className="text-xs">
+                          <MapPin className="mr-1 h-3 w-3" />{z.geofence_zones?.name ?? "—"}
                         </Badge>
                       ))}
                       {s.schedule_geofences.length > 2 && <Badge variant="outline" className="text-xs">+{s.schedule_geofences.length - 2}</Badge>}
@@ -434,11 +441,12 @@ function SchedulesPage() {
                 <TableCell className="text-xs text-muted-foreground">{s.semester} · {s.school_year}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" title="View students" onClick={() => setViewStudents(s)}><Users className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => openEditGroup(g.rows)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete({ label, ids: g.rows.map((r) => r.id) })}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -447,11 +455,11 @@ function SchedulesPage() {
         open={!!toDelete}
         onOpenChange={(v) => { if (!v) setToDelete(null); }}
         title="Delete this schedule?"
-        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.subjects?.code} · {toDelete?.sections?.name}</span>? Historical attendance sessions will remain, but this schedule cannot be recovered.</>}
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.label}</span>? {toDelete && toDelete.ids.length > 1 ? `All ${toDelete.ids.length} day rows for this schedule will be removed. ` : ""}Historical attendance sessions will remain, but this schedule cannot be recovered.</>}
         confirmLabel="Delete"
         loading={remove.isPending}
         loadingLabel="Deleting…"
-        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.ids, { onSettled: () => setToDelete(null) }); }}
       />
     </div>
   );

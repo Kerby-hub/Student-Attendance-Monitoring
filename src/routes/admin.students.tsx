@@ -18,6 +18,10 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -86,6 +90,7 @@ function StudentsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Student | null>(null);
   const [search, setSearch] = useState("");
   const [filterProgram, setFilterProgram] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
@@ -203,13 +208,37 @@ function StudentsPage() {
       };
 
       if (editing) {
+        const trimmedNo = form.student_no.trim();
+        const trimmedEmail = email.toLowerCase();
+
+        // Duplicate Student ID check (only if changed).
+        if (trimmedNo && trimmedNo !== editing.student_no) {
+          const { data: dup } = await supabase
+            .from("students").select("id").eq("student_no", trimmedNo).neq("id", editing.id).maybeSingle();
+          if (dup) {
+            setErrors((e) => ({ ...e, student_no: "Student ID already exists." }));
+            throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+          }
+        }
+
+        // Duplicate email check (only if changed).
+        const currentEmail = (editing.email ?? "").trim().toLowerCase();
+        if (trimmedEmail && trimmedEmail !== currentEmail) {
+          const { data: dupEmail } = await supabase
+            .from("students").select("id").ilike("email", trimmedEmail).neq("id", editing.id).maybeSingle();
+          if (dupEmail) {
+            setErrors((e) => ({ ...e, email: "Email already exists." }));
+            throw new Error("EMAIL_TAKEN: Email already exists.");
+          }
+        }
+
         const payload = {
-          student_no: form.student_no.trim(),
+          student_no: trimmedNo,
           first_name: first || null,
           last_name: last || null,
           middle_name: mid || null,
           full_name: full || form.student_no,
-          email: email || null,
+          email: trimmedEmail || null,
           contact_number: form.contact_number.trim() || null,
           program: form.program || null,
           year_level: form.year_level ? parseInt(form.year_level, 10) : null,
@@ -217,17 +246,30 @@ function StudentsPage() {
           ...guardianPayload,
         };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
-        if (error) throw error;
+        if (error) {
+          if ((error as { code?: string }).code === "23505" && /student_no/i.test(error.message)) {
+            setErrors((e) => ({ ...e, student_no: "Student ID already exists." }));
+            throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+          }
+          throw error;
+        }
         if (editing.user_id) {
           try {
             await updateProfileFn({
               data: {
                 userId: editing.user_id,
                 fullName: full || form.student_no,
-                email: email || undefined,
+                email: trimmedEmail || undefined,
               },
             });
-          } catch { /* non-fatal */ }
+          } catch (e) {
+            const msg = (e as Error).message || "";
+            if (/EMAIL_TAKEN/.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN: Email already exists.");
+            }
+            /* other errors non-fatal */
+          }
         }
         return null;
       }
@@ -270,15 +312,22 @@ function StudentsPage() {
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
-      const msg = e.message || "Failed to create account";
-      if (/already registered|already exists|duplicate/i.test(msg)) {
+      const msg = e.message || "Failed to save student";
+      if (/STUDENT_NO_TAKEN/.test(msg)) {
+        setErrors((er) => ({ ...er, student_no: "Student ID already exists." }));
+        toast.error("Student ID already exists");
+      } else if (/TEACHER_NO_TAKEN/.test(msg)) {
+        toast.error("Teacher ID already exists");
+      } else if (/EMAIL_TAKEN/.test(msg) || /already registered|already exists|duplicate/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Email already exists." }));
         toast.error("Email already exists");
       } else if (/invalid.*email/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Invalid email address." }));
         toast.error("Invalid email");
       } else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) {
         toast.error("Password too weak");
       } else {
-        toast.error(msg);
+        toast.error(msg.replace(/^[A-Z_]+:\s*/, ""));
       }
     },
   });
@@ -396,7 +445,7 @@ function StudentsPage() {
                 <div>
                   <Label>Year level</Label>
                   <Select value={form.year_level} onValueChange={(v) => setForm({ ...form, year_level: v })}>
-                    <SelectTrigger><SelectValue placeholder="Year" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
                     <SelectContent>
                       {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
                     </SelectContent>
@@ -524,28 +573,28 @@ function StudentsPage() {
           />
         </div>
         <Select value={filterProgram} onValueChange={setFilterProgram}>
-          <SelectTrigger><SelectValue placeholder="Program" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All programs</SelectItem>
             {programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterYear} onValueChange={setFilterYear}>
-          <SelectTrigger><SelectValue placeholder="Year level" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All years</SelectItem>
             {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSection} onValueChange={setFilterSection}>
-          <SelectTrigger><SelectValue placeholder="Section" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All sections</SelectItem>
             {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -603,11 +652,7 @@ function StudentsPage() {
                     </Button>
                   ) : (
                     <Button variant="ghost" size="icon" title="Archive"
-                      onClick={() => {
-                        if (confirm(`Archive ${s.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) {
-                          setStatus.mutate({ id: s.id, status: "archived", userId: s.user_id });
-                        }
-                      }}>
+                      onClick={() => setArchiveTarget(s)}>
                       <Archive className="h-4 w-4" />
                     </Button>
                   )}
@@ -617,6 +662,35 @@ function StudentsPage() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!archiveTarget} onOpenChange={(v) => { if (!v) setArchiveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive <span className="font-medium">{archiveTarget?.full_name}</span>?
+              They will no longer be able to access the system, but historical
+              attendance records will be preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={setStatus.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={setStatus.isPending}
+              onClick={() => {
+                if (!archiveTarget) return;
+                const t = archiveTarget;
+                setStatus.mutate(
+                  { id: t.id, status: "archived", userId: t.user_id },
+                  { onSettled: () => setArchiveTarget(null) },
+                );
+              }}
+            >
+              {setStatus.isPending ? "Archiving…" : "Archive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -68,14 +68,45 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const normalizedEmail = data.email.trim().toLowerCase();
+
+    // 0) Pre-flight duplicate checks — avoid creating an orphan auth user
+    //    when the student_no/teacher_no or email is already taken.
+    if (data.role === "student") {
+      const sn = data.studentData?.student_no?.trim();
+      if (sn) {
+        const { data: existing } = await supabaseAdmin
+          .from("students").select("id").eq("student_no", sn).maybeSingle();
+        if (existing) throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+      }
+    } else if (data.role === "teacher") {
+      const tn = data.teacherData?.teacher_no?.trim();
+      if (tn) {
+        const { data: existing } = await supabaseAdmin
+          .from("teachers").select("id").eq("teacher_no", tn).maybeSingle();
+        if (existing) throw new Error("TEACHER_NO_TAKEN: Teacher ID already exists.");
+      }
+    }
+    {
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles").select("id").ilike("email", normalizedEmail).maybeSingle();
+      if (existingProfile) throw new Error("EMAIL_TAKEN: Email already exists.");
+    }
+
     // 1) Create auth user
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email: normalizedEmail,
       password: data.password,
       email_confirm: true,
       user_metadata: { full_name: data.fullName, role: data.role },
     });
-    if (createErr || !created.user) throw new Error(createErr?.message ?? "Failed to create user");
+    if (createErr || !created.user) {
+      const msg = createErr?.message ?? "Failed to create user";
+      if (/already.*registered|already.*exists|duplicate/i.test(msg)) {
+        throw new Error("EMAIL_TAKEN: Email already exists.");
+      }
+      throw new Error(msg);
+    }
     const newUserId = created.user.id;
 
     // 2) Mark profile as needing password change + status (handle_new_user trigger already inserted profile+role)
@@ -89,15 +120,19 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newUserId);
     await supabaseAdmin.from("user_roles").insert({ user_id: newUserId, role: data.role });
 
-    // 4) Role-specific record (auto-generate IDs if missing)
+    // 4) Role-specific record (auto-generate IDs if missing). Roll back the
+    //    auth user if the insert fails so we never leave an orphan account.
+    async function rollbackAuth() {
+      try { await supabaseAdmin.auth.admin.deleteUser(newUserId); } catch { /* noop */ }
+    }
     if (data.role === "student") {
       const sd = data.studentData ?? ({} as NonNullable<typeof data.studentData>);
       const studentNo = sd.student_no?.trim() || await nextAutoId(supabaseAdmin, "student");
-      await supabaseAdmin.from("students").insert({
+      const { error: insErr } = await supabaseAdmin.from("students").insert({
         user_id: newUserId,
         student_no: studentNo,
         full_name: data.fullName,
-        email: data.email,
+        email: normalizedEmail,
         program: sd.program ?? null,
         year_level: sd.year_level ?? null,
         section_id: sd.section_id ?? null,
@@ -105,18 +140,32 @@ export const adminCreateUser = createServerFn({ method: "POST" })
         parent_contact: sd.parent_contact ?? null,
         status: data.status,
       });
+      if (insErr) {
+        await rollbackAuth();
+        if ((insErr as { code?: string }).code === "23505" || /duplicate|unique/i.test(insErr.message)) {
+          throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+        }
+        throw new Error(insErr.message);
+      }
     } else if (data.role === "teacher") {
       const td = data.teacherData ?? ({} as NonNullable<typeof data.teacherData>);
       const teacherNo = td.teacher_no?.trim() || await nextAutoId(supabaseAdmin, "teacher");
-      await supabaseAdmin.from("teachers").insert({
+      const { error: insErr } = await supabaseAdmin.from("teachers").insert({
         user_id: newUserId,
         teacher_no: teacherNo,
         full_name: data.fullName,
-        email: data.email,
+        email: normalizedEmail,
         department_id: td.department_id ?? null,
         position: td.position ?? null,
         status: data.status,
       });
+      if (insErr) {
+        await rollbackAuth();
+        if ((insErr as { code?: string }).code === "23505" || /duplicate|unique/i.test(insErr.message)) {
+          throw new Error("TEACHER_NO_TAKEN: Teacher ID already exists.");
+        }
+        throw new Error(insErr.message);
+      }
     }
 
     // 5) Credential email — provider resolved from Admin → Settings first,
@@ -253,23 +302,45 @@ export const adminUpdateUserProfile = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // If email is provided, check it against the current record. Only enforce
+    // uniqueness when it actually changed to another account's email.
+    let normalizedEmail: string | undefined;
+    if (typeof data.email === "string" && data.email.trim()) {
+      normalizedEmail = data.email.trim().toLowerCase();
+      const { data: current } = await supabaseAdmin
+        .from("profiles").select("email").eq("id", data.userId).maybeSingle();
+      const currentEmail = (current?.email ?? "").trim().toLowerCase();
+      if (normalizedEmail !== currentEmail) {
+        const { data: taken } = await supabaseAdmin
+          .from("profiles").select("id").ilike("email", normalizedEmail)
+          .neq("id", data.userId).maybeSingle();
+        if (taken) throw new Error("EMAIL_TAKEN: Email already exists.");
+      }
+    }
+
     const profilePatch: { full_name?: string; email?: string } = {};
     if (typeof data.fullName === "string") profilePatch.full_name = data.fullName;
-    if (typeof data.email === "string" && data.email) profilePatch.email = data.email;
+    if (normalizedEmail) profilePatch.email = normalizedEmail;
     if (Object.keys(profilePatch).length > 0) {
       await supabaseAdmin.from("profiles").update(profilePatch).eq("id", data.userId);
     }
 
     // Keep auth metadata in sync so anything reading user_metadata also updates.
     const authUpdate: Record<string, unknown> = {};
-    if (typeof data.email === "string" && data.email) authUpdate.email = data.email;
+    if (normalizedEmail) authUpdate.email = normalizedEmail;
     if (typeof data.fullName === "string") {
       authUpdate.user_metadata = { full_name: data.fullName };
     }
     if (Object.keys(authUpdate).length > 0) {
       try {
         await supabaseAdmin.auth.admin.updateUserById(data.userId, authUpdate as never);
-      } catch { /* non-fatal */ }
+      } catch (e) {
+        const msg = (e as Error).message || "";
+        if (/already.*(registered|exists)|duplicate/i.test(msg)) {
+          throw new Error("EMAIL_TAKEN: Email already exists.");
+        }
+        /* other errors non-fatal */
+      }
     }
 
     await supabaseAdmin.from("audit_logs").insert({

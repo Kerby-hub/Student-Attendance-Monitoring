@@ -34,6 +34,9 @@ function SubjectsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Subject | null>(null);
+  const [toDelete, setToDelete] = useState<Subject | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [form, setForm] = useState({
     code: "", name: "", description: "", units: 3, department_id: "" as string | "",
   });

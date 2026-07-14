@@ -278,35 +278,28 @@ function SchedulesPage() {
                 </div>
                 <div><Label>Start<RequiredMark /></Label><Input type="time" value={form.start_time} className={cn(errors.start_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, start_time: e.target.value }); clearErr("start_time"); clearErr("end_time"); }} /><FieldError message={errors.start_time} /></div>
                 <div><Label>End<RequiredMark /></Label><Input type="time" value={form.end_time} className={cn(errors.end_time && invalidInputClass)} onChange={(e) => { setForm({ ...form, end_time: e.target.value }); clearErr("end_time"); }} /><FieldError message={errors.end_time} /></div>
-                <div>
-                  <Label>Academic year<RequiredMark /></Label>
-                  <Select value={form.academic_year_id} onValueChange={(v) => { setForm({ ...form, academic_year_id: v, semester_id: "" }); clearErr("academic_year_id"); }}>
-                    <SelectTrigger className={cn(errors.academic_year_id && invalidInputClass)}><SelectValue placeholder="Select academic year" /></SelectTrigger>
-                    <SelectContent>{years.map((y) => <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FieldError message={errors.academic_year_id} />
-                </div>
-                <div>
-                  <Label>Semester<RequiredMark /></Label>
-                  <Select value={form.semester_id} onValueChange={(v) => {
-                    const sem = allSemesters.find((s) => s.id === v);
-                    setForm({
-                      ...form,
-                      semester_id: v,
-                      academic_year_id: sem?.academic_year_id ?? form.academic_year_id,
-                      semester: sem?.name ?? form.semester,
-                      school_year: years.find((y) => y.id === (sem?.academic_year_id ?? form.academic_year_id))?.name ?? form.school_year,
-                    });
-                    clearErr("semester_id");
-                  }}>
-                    <SelectTrigger className={cn(errors.semester_id && invalidInputClass)}><SelectValue placeholder="Select semester" /></SelectTrigger>
-                    <SelectContent>
-                      {allSemesters
-                        .filter((s) => !form.academic_year_id || s.academic_year_id === form.academic_year_id)
-                        .map((s) => <SelectItem key={s.id} value={s.id}>{s.name}{s.status !== "active" ? ` (${s.status})` : ""}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FieldError message={errors.semester_id} />
+                <div className="sm:col-span-2">
+                  <Label>Academic year &amp; semester</Label>
+                  {currentSemester ? (
+                    <div className="mt-1 rounded-md border bg-muted/30 p-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="uppercase">Active</Badge>
+                        <span className="font-medium">
+                          {years.find((y) => y.id === currentSemester.academic_year_id)?.name ?? form.school_year}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="font-medium">{currentSemester.name}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Schedules are saved under the currently active academic year and semester. Change the active period from <strong>Academic Management</strong>.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-1 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                      Please set an active Academic Year and Semester first.
+                    </div>
+                  )}
+                  {errors.semester_id ? <FieldError message={errors.semester_id} /> : null}
                 </div>
 
                 <div className="sm:col-span-2">

@@ -46,11 +46,23 @@ function SectionsPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Section name is required.";
+    if (!form.school_year.trim()) e.school_year = "School year is required.";
+    if (!form.year_level || form.year_level < 1) e.year_level = "Year level must be at least 1.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  const upsert = useMutation({
+    mutationFn: async () => {
+      if (!validate()) throw new Error("Please fix the highlighted fields.");
       const payload = {
-        name: form.name,
-        program: form.program || null,
+        name: form.name.trim(),
+        program: form.program.trim() || null,
         year_level: form.year_level || null,
-        school_year: form.school_year,
+        school_year: form.school_year.trim(),
       };
       if (editing) {
         const { error } = await supabase.from("sections").update(payload).eq("id", editing.id);
@@ -63,10 +75,12 @@ function SectionsPage() {
     onSuccess: () => {
       toast.success(editing ? "Section updated" : "Section created");
       qc.invalidateQueries({ queryKey: ["sections"] });
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      if (e.message !== "Please fix the highlighted fields.") toast.error(e.message);
+    },
   });
 
   const remove = useMutation({

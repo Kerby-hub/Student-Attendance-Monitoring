@@ -591,6 +591,16 @@ function EnrollmentsTab() {
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(v) => { if (!v) setRemoveTarget(null); }}
+        title="Remove this enrollment?"
+        description={<>Remove enrollment for <span className="font-medium">{removeTarget?.label}</span>? Attendance records for this student are preserved.</>}
+        confirmLabel="Remove"
+        loading={remove.isPending}
+        loadingLabel="Removing…"
+        onConfirm={() => { if (removeTarget) { const t = removeTarget; remove.mutate(t.id, { onSettled: () => setRemoveTarget(null) }); } }}
+      />
     </div>
   );
 }

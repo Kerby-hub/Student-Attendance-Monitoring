@@ -42,8 +42,11 @@ function TeachersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Teacher | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("active");
   const [search, setSearch] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
     temp_password: "",

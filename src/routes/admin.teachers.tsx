@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminCreateUser, adminSetStatus, adminUpdateUserProfile } from "@/lib/admin/users.functions";
 import { invalidateUserCaches } from "@/lib/admin/invalidate";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

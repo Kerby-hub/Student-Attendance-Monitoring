@@ -233,7 +233,7 @@ function AttendanceSessionPage() {
         title={schedule ? `${schedule.subjects?.code} — ${schedule.subjects?.name}` : "Attendance session"}
         description={schedule ? `Section ${schedule.sections?.name} • Room ${schedule.room ?? "TBA"} • ${schedule.start_time?.slice(0,5)}–${schedule.end_time?.slice(0,5)}` : ""}
         action={session?.status === "open" && !sessionEnded
-          ? <Button variant="destructive" onClick={closeSession}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
+          ? <Button variant="destructive" onClick={requestClose}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
           : <Button onClick={startSession} disabled={sessionEnded || session?.status === "closed" || semesterClosed}>Start session</Button>}
       />
 

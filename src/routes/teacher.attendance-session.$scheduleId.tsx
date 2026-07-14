@@ -316,6 +316,16 @@ function AttendanceSessionPage() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={closeOpen}
+        onOpenChange={(v) => { if (!closing) setCloseOpen(v); }}
+        title="Close attendance session?"
+        description="Students will no longer be able to check in. Missing students will be marked absent."
+        confirmLabel="Close session"
+        loading={closing}
+        loadingLabel="Closing…"
+        onConfirm={performClose}
+      />
     </div>
   );
 }

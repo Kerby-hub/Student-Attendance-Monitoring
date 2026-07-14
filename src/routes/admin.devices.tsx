@@ -183,8 +183,6 @@ function DevicesPage() {
                   <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => setResetTarget(r)}>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}

@@ -31,17 +31,37 @@ function StudentDashboard() {
   });
 
   const today = DAY_NAMES[new Date().getDay()];
+  const { data: currentSemester } = useCurrentSemester();
+  const { data: currentYear } = useCurrentAcademicYear();
+
+  const { data: enrollment } = useQuery({
+    queryKey: ["my-enrollment", student?.id, currentSemester?.id],
+    enabled: !!student?.id && !!currentSemester?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("student_enrollments" as never)
+        .select("*, sections:sections!student_enrollments_section_id_fkey(name)")
+        .eq("student_id", student!.id)
+        .eq("semester_id", currentSemester!.id)
+        .maybeSingle();
+      return (data ?? null) as unknown as { section_id: string; sections: { name: string } | null } | null;
+    },
+  });
+
+  const activeSectionId = enrollment?.section_id ?? student?.section_id ?? null;
 
   const { data: schedule = [] } = useQuery({
-    queryKey: ["my-today-schedule", student?.section_id, today],
-    enabled: !!student?.section_id,
+    queryKey: ["my-today-schedule", activeSectionId, today, currentSemester?.id],
+    enabled: !!activeSectionId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("class_schedules")
         .select("id, start_time, end_time, room, subjects(code, name), teachers(full_name)")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .eq("section_id", student!.section_id!).eq("day", today as any)
+        .eq("section_id", activeSectionId!).eq("day", today as any)
         .order("start_time");
+      if (currentSemester?.id) q = q.eq("semester_id", currentSemester.id);
+      const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },

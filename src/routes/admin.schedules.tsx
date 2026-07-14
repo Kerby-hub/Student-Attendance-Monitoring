@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ function SchedulesPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [viewStudents, setViewStudents] = useState<Schedule | null>(null);
+  const [toDelete, setToDelete] = useState<Schedule | null>(null);
   const [form, setForm] = useState(empty);
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});

@@ -290,7 +290,7 @@ function TeachersPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.full_name || !form.email || (!!editing && !form.teacher_no) || upsert.isPending}>
+                <Button onClick={() => upsert.mutate()} disabled={upsert.isPending}>
                   {upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>
@@ -362,10 +362,8 @@ function TeachersPage() {
                     <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" title={t.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
-                      if (t.status === "active") {
-                        if (!confirm(`Deactivate ${t.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) return;
-                      }
-                      toggleStatus.mutate(t);
+                      if (t.status === "active") setDeactivateTarget(t);
+                      else toggleStatus.mutate(t);
                     }}>
                       {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                     </Button>

@@ -431,6 +431,21 @@ function SemestersTab() {
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!closeTarget}
+        onOpenChange={(v) => { if (!v) setCloseTarget(null); }}
+        title="Close this semester?"
+        description={<>Close <span className="font-medium">{closeTarget?.name}</span>? New attendance check-ins will be rejected. Historical data is preserved.</>}
+        confirmLabel="Close semester"
+        loading={setStatus.isPending}
+        loadingLabel="Closing…"
+        onConfirm={() => {
+          if (closeTarget) {
+            const t = closeTarget;
+            setStatus.mutate({ id: t.id, status: "closed", is_current: false }, { onSettled: () => setCloseTarget(null) });
+          }
+        }}
+      />
     </div>
   );
 }

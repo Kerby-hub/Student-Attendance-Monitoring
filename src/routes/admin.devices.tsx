@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { adminResetDevice, adminSetDeviceStatus } from "@/lib/device/device.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ function DevicesPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [viewing, setViewing] = useState<DeviceRow | null>(null);
+  const [resetTarget, setResetTarget] = useState<DeviceRow | null>(null);
 
   const resetFn = useServerFn(adminResetDevice);
   const setStatusFn = useServerFn(adminSetDeviceStatus);

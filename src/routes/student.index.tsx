@@ -92,13 +92,25 @@ function StudentDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {student ? `${student.student_no} · ${student.program ?? "—"}` : "No student record linked to your account yet."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Welcome{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {student ? `${student.student_no} · ${student.program ?? "—"}` : "No student record linked to your account yet."}
+          </p>
+        </div>
+        {currentSemester && (
+          <div className="rounded-lg border bg-card px-3 py-2 text-xs">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Current period</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <CalendarRange className="h-3.5 w-3.5" />
+              {currentYear?.name} · {currentSemester.name}
+              {enrollment?.sections?.name && <Badge variant="outline" className="text-[10px]">{enrollment.sections.name}</Badge>}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

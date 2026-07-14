@@ -208,13 +208,23 @@ function SubjectsPage() {
                   <Button variant="ghost" size="icon" onClick={() => toggleArchive.mutate(s)}>
                     {s.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this subject?")) remove.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(v) => { if (!v) setToDelete(null); }}
+        title="Delete this subject?"
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.name}</span>? Consider archiving instead if it has historical schedules.</>}
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+      />
     </div>
   );
 }

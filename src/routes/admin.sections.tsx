@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,8 @@ function SectionsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Section | null>(null);
+  const [toDelete, setToDelete] = useState<Section | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: "", program: "", year_level: 1, school_year: "2025-2026",
   });
@@ -41,13 +44,23 @@ function SectionsPage() {
     },
   });
 
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Section name is required.";
+    if (!form.school_year.trim()) e.school_year = "School year is required.";
+    if (!form.year_level || form.year_level < 1) e.year_level = "Year level must be at least 1.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error("Please fix the highlighted fields.");
       const payload = {
-        name: form.name,
-        program: form.program || null,
+        name: form.name.trim(),
+        program: form.program.trim() || null,
         year_level: form.year_level || null,
-        school_year: form.school_year,
+        school_year: form.school_year.trim(),
       };
       if (editing) {
         const { error } = await supabase.from("sections").update(payload).eq("id", editing.id);
@@ -60,10 +73,12 @@ function SectionsPage() {
     onSuccess: () => {
       toast.success(editing ? "Section updated" : "Section created");
       qc.invalidateQueries({ queryKey: ["sections"] });
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      if (e.message !== "Please fix the highlighted fields.") toast.error(e.message);
+    },
   });
 
   const remove = useMutation({
@@ -71,8 +86,12 @@ function SectionsPage() {
       const { error } = await supabase.from("sections").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); },
-    onError: (e: Error) => toast.error(e.message),
+    onSuccess: () => { toast.success("Section deleted"); qc.invalidateQueries({ queryKey: ["sections"] }); },
+    onError: (e: Error) => {
+      if (/foreign key|violates|referenced/i.test(e.message)) {
+        toast.error("This section is linked to existing data and cannot be deleted. Consider archiving instead.");
+      } else toast.error(e.message);
+    },
   });
 
   const openCreate = () => { setEditing(null); setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" }); setOpen(true); };
@@ -88,19 +107,36 @@ function SectionsPage() {
         title="Sections"
         description="Create class sections grouped by year level and school year."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setErrors({}); }}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New section</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>{editing ? "Edit section" : "New section"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="sm:col-span-2"><Label>Section name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="BSCS 1-A" /></div>
+                <div className="sm:col-span-2">
+                  <Label>Section name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.name} aria-invalid={!!errors.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors((er) => { const n = { ...er }; delete n.name; return n; }); }}
+                    placeholder="BSCS 1-A" />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+                </div>
                 <div><Label>Program</Label><Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} placeholder="BSCS" /></div>
-                <div><Label>Year level</Label><Input type="number" min={1} max={10} value={form.year_level} onChange={(e) => setForm({ ...form, year_level: Number(e.target.value) })} /></div>
-                <div className="sm:col-span-2"><Label>School year</Label><Input value={form.school_year} onChange={(e) => setForm({ ...form, school_year: e.target.value })} placeholder="2025-2026" /></div>
+                <div>
+                  <Label>Year level<span className="text-destructive"> *</span></Label>
+                  <Input type="number" min={1} max={10} value={form.year_level} aria-invalid={!!errors.year_level}
+                    onChange={(e) => { setForm({ ...form, year_level: Number(e.target.value) }); if (errors.year_level) setErrors((er) => { const n = { ...er }; delete n.year_level; return n; }); }} />
+                  {errors.year_level && <p className="mt-1 text-xs text-destructive">{errors.year_level}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>School year<span className="text-destructive"> *</span></Label>
+                  <Input value={form.school_year} aria-invalid={!!errors.school_year}
+                    onChange={(e) => { setForm({ ...form, school_year: e.target.value }); if (errors.school_year) setErrors((er) => { const n = { ...er }; delete n.school_year; return n; }); }}
+                    placeholder="2025-2026" />
+                  {errors.school_year && <p className="mt-1 text-xs text-destructive">{errors.school_year}</p>}
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.name || !form.school_year || upsert.isPending}>{editing ? "Save" : "Create"}</Button>
+                <Button onClick={() => upsert.mutate()} disabled={upsert.isPending}>{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -128,13 +164,23 @@ function SectionsPage() {
                 <TableCell>{s.school_year}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this section?")) remove.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(v) => { if (!v) setToDelete(null); }}
+        title="Delete this section?"
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.name}</span>? This action cannot be undone and may affect linked schedules or students.</>}
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+      />
     </div>
   );
 }

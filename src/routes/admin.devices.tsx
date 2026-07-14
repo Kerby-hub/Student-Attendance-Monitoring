@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { adminResetDevice, adminSetDeviceStatus } from "@/lib/device/device.functions";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ function DevicesPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [viewing, setViewing] = useState<DeviceRow | null>(null);
+  const [resetTarget, setResetTarget] = useState<DeviceRow | null>(null);
 
   const resetFn = useServerFn(adminResetDevice);
   const setStatusFn = useServerFn(adminSetDeviceStatus);
@@ -178,9 +180,7 @@ function DevicesPage() {
                   <Button variant="ghost" size="icon" title={r.status === "active" ? "Disable device" : "Enable device"} onClick={() => toggleStatus.mutate(r)}>
                     {r.status === "active" ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
                   </Button>
-                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => {
-                    if (confirm(`Reset device for ${r.profile?.email}? They will be able to register a new device on next login.`)) resetDevice.mutate(r);
-                  }}>
+                  <Button variant="ghost" size="icon" title="Reset device binding" onClick={() => setResetTarget(r)}>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 </TableCell>
@@ -212,6 +212,18 @@ function DevicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!resetTarget}
+        onOpenChange={(v) => { if (!v) setResetTarget(null); }}
+        title="Reset device binding?"
+        description={<>Reset the device for <span className="font-medium">{resetTarget?.profile?.email}</span>? They will be able to register a new device on their next login.</>}
+        confirmLabel="Reset device"
+        destructive={false}
+        loading={resetDevice.isPending}
+        loadingLabel="Resetting…"
+        onConfirm={() => { if (resetTarget) { const r = resetTarget; resetDevice.mutate(r, { onSettled: () => setResetTarget(null) }); } }}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { CalendarRange, Plus, Pencil, CheckCircle2, XCircle, Archive, Copy, User
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -222,6 +223,7 @@ function SemestersTab() {
   const { data: semesters = [], isLoading } = useSemesters(yearFilter === "all" ? undefined : yearFilter);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Semester | null>(null);
+  const [closeTarget, setCloseTarget] = useState<Semester | null>(null);
   const [form, setForm] = useState<SemForm>(SEM_EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
@@ -413,11 +415,9 @@ function SemestersTab() {
                     </Button>
                   )}
                   {s.status !== "closed" && s.status !== "archived" && (
-                    <Button size="sm" variant="outline" onClick={() => {
-                      if (confirm("Close this semester? New attendance check-ins will be rejected. Historical data is preserved.")) {
-                        setStatus.mutate({ id: s.id, status: "closed", is_current: false });
-                      }
-                    }}><XCircle className="mr-1 h-3.5 w-3.5" />Close</Button>
+                    <Button size="sm" variant="outline" onClick={() => setCloseTarget(s)}>
+                      <XCircle className="mr-1 h-3.5 w-3.5" />Close
+                    </Button>
                   )}
                   {s.status === "closed" && (
                     <Button size="sm" variant="outline" onClick={() => setStatus.mutate({ id: s.id, status: "archived" })}>
@@ -431,6 +431,21 @@ function SemestersTab() {
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!closeTarget}
+        onOpenChange={(v) => { if (!v) setCloseTarget(null); }}
+        title="Close this semester?"
+        description={<>Close <span className="font-medium">{closeTarget?.name}</span>? New attendance check-ins will be rejected. Historical data is preserved.</>}
+        confirmLabel="Close semester"
+        loading={setStatus.isPending}
+        loadingLabel="Closing…"
+        onConfirm={() => {
+          if (closeTarget) {
+            const t = closeTarget;
+            setStatus.mutate({ id: t.id, status: "closed", is_current: false }, { onSettled: () => setCloseTarget(null) });
+          }
+        }}
+      />
     </div>
   );
 }
@@ -443,6 +458,7 @@ function EnrollmentsTab() {
   const { data: semesters = [] } = useSemesters(yearFilter === "all" ? undefined : yearFilter);
   const [semesterFilter, setSemesterFilter] = useState("all");
   const [sectionFilter, setSectionFilter] = useState("all");
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(null);
 
   const { data: sections = [] } = useQuery({
     queryKey: ["sections-simple"],
@@ -568,13 +584,23 @@ function EnrollmentsTab() {
                   </Select>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => { if (confirm("Remove this enrollment? Attendance records are preserved.")) remove.mutate(e.id); }}>Remove</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setRemoveTarget({ id: e.id, label: e.students?.full_name ?? "this enrollment" })}>Remove</Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={(v) => { if (!v) setRemoveTarget(null); }}
+        title="Remove this enrollment?"
+        description={<>Remove enrollment for <span className="font-medium">{removeTarget?.label}</span>? Attendance records for this student are preserved.</>}
+        confirmLabel="Remove"
+        loading={remove.isPending}
+        loadingLabel="Removing…"
+        onConfirm={() => { if (removeTarget) { const t = removeTarget; remove.mutate(t.id, { onSettled: () => setRemoveTarget(null) }); } }}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { adminCreateUser, adminSetStatus, adminUpdateUserProfile } from "@/lib/admin/users.functions";
 import { invalidateUserCaches } from "@/lib/admin/invalidate";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TempPasswordDialog, generateTempPassword } from "@/components/admin/TempPasswordDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,8 +42,11 @@ function TeachersPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Teacher | null>(null);
   const [assignFor, setAssignFor] = useState<Teacher | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Teacher | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("active");
   const [search, setSearch] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [form, setForm] = useState({
     teacher_no: "", full_name: "", email: "", position: "", department_id: "" as string | "",
     temp_password: "",
@@ -73,35 +77,83 @@ function TeachersPage() {
     },
   });
 
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (editing && !form.teacher_no.trim()) e.teacher_no = "Teacher ID is required.";
+    if (!form.full_name.trim()) e.full_name = "Full name is required.";
+    if (!form.email.trim()) e.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalid email address.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error("VALIDATION");
+      const trimmedEmail = form.email.trim().toLowerCase();
       if (editing) {
+        // Only check duplicate email if it changed.
+        const currentEmail = (editing.email ?? "").trim().toLowerCase();
+        if (trimmedEmail && trimmedEmail !== currentEmail) {
+          const { data: dupEmail } = await supabase
+            .from("teachers").select("id").ilike("email", trimmedEmail).neq("id", editing.id).maybeSingle();
+          if (dupEmail) {
+            setErrors((er) => ({ ...er, email: "Email already exists." }));
+            throw new Error("EMAIL_TAKEN");
+          }
+        }
+        // Duplicate teacher_no on change
+        if (form.teacher_no.trim() && form.teacher_no.trim() !== editing.teacher_no) {
+          const { data: dupNo } = await supabase
+            .from("teachers").select("id").eq("teacher_no", form.teacher_no.trim()).neq("id", editing.id).maybeSingle();
+          if (dupNo) {
+            setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+            throw new Error("TEACHER_NO_TAKEN");
+          }
+        }
         const payload = {
-          teacher_no: form.teacher_no,
-          full_name: form.full_name,
-          email: form.email,
-          position: form.position || null,
+          teacher_no: form.teacher_no.trim(),
+          full_name: form.full_name.trim(),
+          email: trimmedEmail,
+          position: form.position.trim() || null,
           department_id: form.department_id || null,
         };
         const { error } = await supabase.from("teachers").update(payload).eq("id", editing.id);
-        if (error) throw error;
-        // Keep profiles + auth metadata in sync so the Teacher dashboard,
-        // Topbar, and AuthContext reflect the new name without a re-login.
+        if (error) {
+          if ((error as { code?: string }).code === "23505") {
+            const msg = error.message;
+            if (/teacher_no/i.test(msg)) {
+              setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+              throw new Error("TEACHER_NO_TAKEN");
+            }
+            if (/email/i.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN");
+            }
+          }
+          throw error;
+        }
         if (editing.user_id) {
           try {
             await updateProfileFn({
               data: {
                 userId: editing.user_id,
-                fullName: form.full_name,
-                email: form.email || undefined,
+                fullName: form.full_name.trim(),
+                email: trimmedEmail || undefined,
               },
             });
-          } catch { /* non-fatal: teacher row already updated */ }
+          } catch (e) {
+            const msg = (e as Error).message || "";
+            if (/EMAIL_TAKEN/.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN");
+            }
+          }
         }
         return null;
       }
 
-      const email = form.email.trim();
+      const email = trimmedEmail;
       if (!email) throw new Error("Email is required to create a login account.");
       const password = form.temp_password.trim() || generateTempPassword();
       if (password.length < 8) throw new Error("Temporary password must be at least 8 characters.");
@@ -110,12 +162,12 @@ function TeachersPage() {
         data: {
           email,
           password,
-          fullName: form.full_name,
+          fullName: form.full_name.trim(),
           role: "teacher",
           status: "active",
           teacherData: {
-            teacher_no: form.teacher_no,
-            position: form.position || undefined,
+            teacher_no: form.teacher_no.trim(),
+            position: form.position.trim() || undefined,
             department_id: form.department_id || null,
           },
         },
@@ -125,16 +177,22 @@ function TeachersPage() {
     onSuccess: (result) => {
       toast.success(editing ? "Teacher updated" : "Teacher created");
       invalidateUserCaches(qc);
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: "" });
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
-      const msg = e.message || "Failed to create account";
-      if (/already registered|already exists|duplicate/i.test(msg)) toast.error("Email already exists");
-      else if (/invalid.*email/i.test(msg)) toast.error("Invalid email");
+      const msg = e.message || "Failed to save";
+      if (msg === "VALIDATION") return;
+      if (/TEACHER_NO_TAKEN/.test(msg)) {
+        setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+        toast.error("Teacher ID already exists");
+      } else if (/EMAIL_TAKEN/.test(msg) || /already registered|already exists|duplicate/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Email already exists." }));
+        toast.error("Email already exists");
+      } else if (/invalid.*email/i.test(msg)) toast.error("Invalid email");
       else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) toast.error("Password too weak");
-      else toast.error(msg);
+      else toast.error(msg.replace(/^[A-Z_]+:\s*/, ""));
     },
   });
 
@@ -175,15 +233,31 @@ function TeachersPage() {
         title="Teachers"
         description="Create teacher records and assign subjects, sections, and schedules."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setErrors({}); }}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New teacher</Button></DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editing ? "Edit teacher" : "New teacher"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label>Teacher ID <span className="text-xs text-muted-foreground">(auto if blank)</span></Label><Input value={form.teacher_no} onChange={(e) => setForm({ ...form, teacher_no: e.target.value })} placeholder="Auto-generated, e.g. TCH-2026-0001" disabled={!editing} /></div>
+                <div>
+                  <Label>Teacher ID{editing && <span className="text-destructive"> *</span>} <span className="text-xs text-muted-foreground">(auto if blank)</span></Label>
+                  <Input value={form.teacher_no} aria-invalid={!!errors.teacher_no}
+                    onChange={(e) => { setForm({ ...form, teacher_no: e.target.value }); clearErr("teacher_no"); }}
+                    placeholder="Auto-generated, e.g. TCH-2026-0001" disabled={!editing} />
+                  {errors.teacher_no && <p className="mt-1 text-xs text-destructive">{errors.teacher_no}</p>}
+                </div>
                 <div><Label>Position</Label><Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} placeholder="Instructor" /></div>
-                <div className="sm:col-span-2"><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
-                <div className="sm:col-span-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div className="sm:col-span-2">
+                  <Label>Full name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.full_name} aria-invalid={!!errors.full_name}
+                    onChange={(e) => { setForm({ ...form, full_name: e.target.value }); clearErr("full_name"); }} />
+                  {errors.full_name && <p className="mt-1 text-xs text-destructive">{errors.full_name}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Email<span className="text-destructive"> *</span></Label>
+                  <Input type="email" value={form.email} aria-invalid={!!errors.email}
+                    onChange={(e) => { setForm({ ...form, email: e.target.value }); clearErr("email"); }} />
+                  {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
+                </div>
                 <div className="sm:col-span-2">
                   <Label>Department</Label>
                   <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
@@ -216,7 +290,7 @@ function TeachersPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.full_name || !form.email || (!!editing && !form.teacher_no) || upsert.isPending}>
+                <Button onClick={() => upsert.mutate()} disabled={upsert.isPending}>
                   {upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>
@@ -288,10 +362,8 @@ function TeachersPage() {
                     <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" title="Assignments" onClick={() => setAssignFor(t)}><Settings2 className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" title={t.status === "active" ? "Deactivate" : "Reactivate"} onClick={() => {
-                      if (t.status === "active") {
-                        if (!confirm(`Deactivate ${t.full_name}? They will no longer be able to access the system, but historical records will be preserved.`)) return;
-                      }
-                      toggleStatus.mutate(t);
+                      if (t.status === "active") setDeactivateTarget(t);
+                      else toggleStatus.mutate(t);
                     }}>
                       {t.status === "active" ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                     </Button>
@@ -304,6 +376,17 @@ function TeachersPage() {
       </div>
 
       <AssignmentsDialog teacher={assignFor} onClose={() => setAssignFor(null)} />
+
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onOpenChange={(v) => { if (!v) setDeactivateTarget(null); }}
+        title="Deactivate teacher?"
+        description={<>Are you sure you want to deactivate <span className="font-medium">{deactivateTarget?.full_name}</span>? They will no longer be able to access the system. Historical records will be preserved.</>}
+        confirmLabel="Deactivate"
+        loading={toggleStatus.isPending}
+        loadingLabel="Deactivating…"
+        onConfirm={() => { if (deactivateTarget) { const t = deactivateTarget; toggleStatus.mutate(t, { onSettled: () => setDeactivateTarget(null) }); } }}
+      />
     </div>
   );
 }

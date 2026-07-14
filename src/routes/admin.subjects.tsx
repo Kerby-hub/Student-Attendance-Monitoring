@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,9 @@ function SubjectsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Subject | null>(null);
+  const [toDelete, setToDelete] = useState<Subject | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
   const [form, setForm] = useState({
     code: "", name: "", description: "", units: 3, department_id: "" as string | "",
   });
@@ -55,12 +59,22 @@ function SubjectsPage() {
     },
   });
 
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.code.trim()) e.code = "Code is required.";
+    if (!form.name.trim()) e.name = "Name is required.";
+    if (!Number.isFinite(form.units) || form.units <= 0) e.units = "Units must be greater than 0.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
   const upsert = useMutation({
     mutationFn: async () => {
+      if (!validate()) throw new Error("VALIDATION");
       const payload = {
-        code: form.code,
-        name: form.name,
-        description: form.description || null,
+        code: form.code.trim(),
+        name: form.name.trim(),
+        description: form.description.trim() || null,
         units: form.units,
         department_id: form.department_id || null,
       };
@@ -75,10 +89,10 @@ function SubjectsPage() {
     onSuccess: () => {
       toast.success(editing ? "Subject updated" : "Subject created");
       qc.invalidateQueries({ queryKey: ["subjects"] });
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ code: "", name: "", description: "", units: 3, department_id: "" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => { if (e.message !== "VALIDATION") toast.error(e.message); },
   });
 
   const toggleArchive = useMutation({
@@ -99,7 +113,11 @@ function SubjectsPage() {
       toast.success("Subject deleted");
       qc.invalidateQueries({ queryKey: ["subjects"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      if (/foreign key|violates|referenced/i.test(e.message))
+        toast.error("This subject is linked to schedules and cannot be deleted. Archive it instead.");
+      else toast.error(e.message);
+    },
   });
 
   const openCreate = () => {
@@ -122,14 +140,29 @@ function SubjectsPage() {
         title="Subjects"
         description="Manage subjects offered across departments."
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setErrors({}); }}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New subject</Button></DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader><DialogTitle>{editing ? "Edit subject" : "New subject"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label>Code</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="CS101" /></div>
-                <div><Label>Units</Label><Input type="number" step="0.5" value={form.units} onChange={(e) => setForm({ ...form, units: Number(e.target.value) })} /></div>
-                <div className="sm:col-span-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Intro to Computing" /></div>
+                <div>
+                  <Label>Code<span className="text-destructive"> *</span></Label>
+                  <Input value={form.code} aria-invalid={!!errors.code}
+                    onChange={(e) => { setForm({ ...form, code: e.target.value }); clearErr("code"); }} placeholder="CS101" />
+                  {errors.code && <p className="mt-1 text-xs text-destructive">{errors.code}</p>}
+                </div>
+                <div>
+                  <Label>Units<span className="text-destructive"> *</span></Label>
+                  <Input type="number" step="0.5" value={form.units} aria-invalid={!!errors.units}
+                    onChange={(e) => { setForm({ ...form, units: Number(e.target.value) }); clearErr("units"); }} />
+                  {errors.units && <p className="mt-1 text-xs text-destructive">{errors.units}</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.name} aria-invalid={!!errors.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); clearErr("name"); }} placeholder="Intro to Computing" />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+                </div>
                 <div className="sm:col-span-2">
                   <Label>Department</Label>
                   <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
@@ -144,8 +177,8 @@ function SubjectsPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                <Button onClick={() => upsert.mutate()} disabled={!form.code || !form.name || upsert.isPending}>
-                  {editing ? "Save" : "Create"}
+                <Button onClick={() => upsert.mutate()} disabled={upsert.isPending}>
+                  {upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -179,13 +212,23 @@ function SubjectsPage() {
                   <Button variant="ghost" size="icon" onClick={() => toggleArchive.mutate(s)}>
                     {s.archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm("Delete this subject?")) remove.mutate(s.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setToDelete(s)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(v) => { if (!v) setToDelete(null); }}
+        title="Delete this subject?"
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.name}</span>? Consider archiving instead if it has historical schedules.</>}
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+      />
     </div>
   );
 }

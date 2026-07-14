@@ -6,6 +6,7 @@ import { Square, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,8 @@ function AttendanceSessionPage() {
   const [secsLeft, setSecsLeft] = useState(15);
   const [sessionEnded, setSessionEnded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   // Load QR rotation interval from system_settings (fallback 15s).
   useEffect(() => {
@@ -200,20 +203,28 @@ function AttendanceSessionPage() {
     setSession(data as Session);
   };
 
-  const closeSession = async () => {
+  const requestClose = () => { if (session) setCloseOpen(true); };
+  const performClose = async () => {
     if (!session) return;
-    if (!confirm("Close attendance session? Students will no longer be able to check in.")) return;
-    await supabase.from("attendance_sessions")
-      .update({ status: "closed", closed_at: new Date().toISOString() })
-      .eq("id", session.id);
-    // Mark missing students as absent
-    if (missing.length > 0) {
-      await supabase.from("attendance_records").insert(
-        missing.map((s) => ({ session_id: session.id, student_id: s.id, status: "absent" }))
-      );
+    setClosing(true);
+    try {
+      await supabase.from("attendance_sessions")
+        .update({ status: "closed", closed_at: new Date().toISOString() })
+        .eq("id", session.id);
+      // Mark missing students as absent
+      if (missing.length > 0) {
+        await supabase.from("attendance_records").insert(
+          missing.map((s) => ({ session_id: session.id, student_id: s.id, status: "absent" }))
+        );
+      }
+      toast.success("Session closed");
+      navigate({ to: "/teacher" });
+    } catch (e) {
+      toast.error((e as Error).message || "Failed to close session");
+    } finally {
+      setClosing(false);
+      setCloseOpen(false);
     }
-    toast.success("Session closed");
-    navigate({ to: "/teacher" });
   };
 
   return (
@@ -222,7 +233,7 @@ function AttendanceSessionPage() {
         title={schedule ? `${schedule.subjects?.code} — ${schedule.subjects?.name}` : "Attendance session"}
         description={schedule ? `Section ${schedule.sections?.name} • Room ${schedule.room ?? "TBA"} • ${schedule.start_time?.slice(0,5)}–${schedule.end_time?.slice(0,5)}` : ""}
         action={session?.status === "open" && !sessionEnded
-          ? <Button variant="destructive" onClick={closeSession}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
+          ? <Button variant="destructive" onClick={requestClose}><Square className="mr-1.5 h-4 w-4" /> Close session</Button>
           : <Button onClick={startSession} disabled={sessionEnded || session?.status === "closed" || semesterClosed}>Start session</Button>}
       />
 
@@ -305,6 +316,16 @@ function AttendanceSessionPage() {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={closeOpen}
+        onOpenChange={(v) => { if (!closing) setCloseOpen(v); }}
+        title="Close attendance session?"
+        description="Students will no longer be able to check in. Missing students will be marked absent."
+        confirmLabel="Close session"
+        loading={closing}
+        loadingLabel="Closing…"
+        onConfirm={performClose}
+      />
     </div>
   );
 }

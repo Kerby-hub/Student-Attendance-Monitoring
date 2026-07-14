@@ -5,6 +5,7 @@ import { CalendarRange, Plus, Pencil, CheckCircle2, XCircle, Archive, Copy, User
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -222,6 +223,7 @@ function SemestersTab() {
   const { data: semesters = [], isLoading } = useSemesters(yearFilter === "all" ? undefined : yearFilter);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Semester | null>(null);
+  const [closeTarget, setCloseTarget] = useState<Semester | null>(null);
   const [form, setForm] = useState<SemForm>(SEM_EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });

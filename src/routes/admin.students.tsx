@@ -208,13 +208,37 @@ function StudentsPage() {
       };
 
       if (editing) {
+        const trimmedNo = form.student_no.trim();
+        const trimmedEmail = email.toLowerCase();
+
+        // Duplicate Student ID check (only if changed).
+        if (trimmedNo && trimmedNo !== editing.student_no) {
+          const { data: dup } = await supabase
+            .from("students").select("id").eq("student_no", trimmedNo).neq("id", editing.id).maybeSingle();
+          if (dup) {
+            setErrors((e) => ({ ...e, student_no: "Student ID already exists." }));
+            throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+          }
+        }
+
+        // Duplicate email check (only if changed).
+        const currentEmail = (editing.email ?? "").trim().toLowerCase();
+        if (trimmedEmail && trimmedEmail !== currentEmail) {
+          const { data: dupEmail } = await supabase
+            .from("students").select("id").ilike("email", trimmedEmail).neq("id", editing.id).maybeSingle();
+          if (dupEmail) {
+            setErrors((e) => ({ ...e, email: "Email already exists." }));
+            throw new Error("EMAIL_TAKEN: Email already exists.");
+          }
+        }
+
         const payload = {
-          student_no: form.student_no.trim(),
+          student_no: trimmedNo,
           first_name: first || null,
           last_name: last || null,
           middle_name: mid || null,
           full_name: full || form.student_no,
-          email: email || null,
+          email: trimmedEmail || null,
           contact_number: form.contact_number.trim() || null,
           program: form.program || null,
           year_level: form.year_level ? parseInt(form.year_level, 10) : null,
@@ -222,17 +246,30 @@ function StudentsPage() {
           ...guardianPayload,
         };
         const { error } = await supabase.from("students").update(payload).eq("id", editing.id);
-        if (error) throw error;
+        if (error) {
+          if ((error as { code?: string }).code === "23505" && /student_no/i.test(error.message)) {
+            setErrors((e) => ({ ...e, student_no: "Student ID already exists." }));
+            throw new Error("STUDENT_NO_TAKEN: Student ID already exists.");
+          }
+          throw error;
+        }
         if (editing.user_id) {
           try {
             await updateProfileFn({
               data: {
                 userId: editing.user_id,
                 fullName: full || form.student_no,
-                email: email || undefined,
+                email: trimmedEmail || undefined,
               },
             });
-          } catch { /* non-fatal */ }
+          } catch (e) {
+            const msg = (e as Error).message || "";
+            if (/EMAIL_TAKEN/.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN: Email already exists.");
+            }
+            /* other errors non-fatal */
+          }
         }
         return null;
       }

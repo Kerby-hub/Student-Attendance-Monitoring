@@ -44,8 +44,6 @@ function SectionsPage() {
     },
   });
 
-  const upsert = useMutation({
-    mutationFn: async () => {
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Section name is required.";

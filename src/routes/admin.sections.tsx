@@ -29,6 +29,8 @@ function SectionsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Section | null>(null);
+  const [toDelete, setToDelete] = useState<Section | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: "", program: "", year_level: 1, school_year: "2025-2026",
   });

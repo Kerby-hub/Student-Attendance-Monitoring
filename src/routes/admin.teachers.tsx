@@ -79,33 +79,83 @@ function TeachersPage() {
 
   const upsert = useMutation({
     mutationFn: async () => {
+  function validate(): boolean {
+    const e: Record<string, string> = {};
+    if (editing && !form.teacher_no.trim()) e.teacher_no = "Teacher ID is required.";
+    if (!form.full_name.trim()) e.full_name = "Full name is required.";
+    if (!form.email.trim()) e.email = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalke email address.".replace("valke", "valid");
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  const upsert = useMutation({
+    mutationFn: async () => {
+      if (!validate()) throw new Error("VALIDATION");
+      const trimmedEmail = form.email.trim().toLowerCase();
       if (editing) {
+        // Only check duplicate email if it changed.
+        const currentEmail = (editing.email ?? "").trim().toLowerCase();
+        if (trimmedEmail && trimmedEmail !== currentEmail) {
+          const { data: dupEmail } = await supabase
+            .from("teachers").select("id").ilike("email", trimmedEmail).neq("id", editing.id).maybeSingle();
+          if (dupEmail) {
+            setErrors((er) => ({ ...er, email: "Email already exists." }));
+            throw new Error("EMAIL_TAKEN");
+          }
+        }
+        // Duplicate teacher_no on change
+        if (form.teacher_no.trim() && form.teacher_no.trim() !== editing.teacher_no) {
+          const { data: dupNo } = await supabase
+            .from("teachers").select("id").eq("teacher_no", form.teacher_no.trim()).neq("id", editing.id).maybeSingle();
+          if (dupNo) {
+            setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+            throw new Error("TEACHER_NO_TAKEN");
+          }
+        }
         const payload = {
-          teacher_no: form.teacher_no,
-          full_name: form.full_name,
-          email: form.email,
-          position: form.position || null,
+          teacher_no: form.teacher_no.trim(),
+          full_name: form.full_name.trim(),
+          email: trimmedEmail,
+          position: form.position.trim() || null,
           department_id: form.department_id || null,
         };
         const { error } = await supabase.from("teachers").update(payload).eq("id", editing.id);
-        if (error) throw error;
-        // Keep profiles + auth metadata in sync so the Teacher dashboard,
-        // Topbar, and AuthContext reflect the new name without a re-login.
+        if (error) {
+          if ((error as { code?: string }).code === "23505") {
+            const msg = error.message;
+            if (/teacher_no/i.test(msg)) {
+              setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+              throw new Error("TEACHER_NO_TAKEN");
+            }
+            if (/email/i.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN");
+            }
+          }
+          throw error;
+        }
         if (editing.user_id) {
           try {
             await updateProfileFn({
               data: {
                 userId: editing.user_id,
-                fullName: form.full_name,
-                email: form.email || undefined,
+                fullName: form.full_name.trim(),
+                email: trimmedEmail || undefined,
               },
             });
-          } catch { /* non-fatal: teacher row already updated */ }
+          } catch (e) {
+            const msg = (e as Error).message || "";
+            if (/EMAIL_TAKEN/.test(msg)) {
+              setErrors((er) => ({ ...er, email: "Email already exists." }));
+              throw new Error("EMAIL_TAKEN");
+            }
+          }
         }
         return null;
       }
 
-      const email = form.email.trim();
+      const email = trimmedEmail;
       if (!email) throw new Error("Email is required to create a login account.");
       const password = form.temp_password.trim() || generateTempPassword();
       if (password.length < 8) throw new Error("Temporary password must be at least 8 characters.");
@@ -114,12 +164,12 @@ function TeachersPage() {
         data: {
           email,
           password,
-          fullName: form.full_name,
+          fullName: form.full_name.trim(),
           role: "teacher",
           status: "active",
           teacherData: {
-            teacher_no: form.teacher_no,
-            position: form.position || undefined,
+            teacher_no: form.teacher_no.trim(),
+            position: form.position.trim() || undefined,
             department_id: form.department_id || null,
           },
         },
@@ -129,16 +179,22 @@ function TeachersPage() {
     onSuccess: (result) => {
       toast.success(editing ? "Teacher updated" : "Teacher created");
       invalidateUserCaches(qc);
-      setOpen(false); setEditing(null);
+      setOpen(false); setEditing(null); setErrors({});
       setForm({ teacher_no: "", full_name: "", email: "", position: "", department_id: "", temp_password: "" });
       if (result) setCredentials(result);
     },
     onError: (e: Error) => {
-      const msg = e.message || "Failed to create account";
-      if (/already registered|already exists|duplicate/i.test(msg)) toast.error("Email already exists");
-      else if (/invalid.*email/i.test(msg)) toast.error("Invalid email");
+      const msg = e.message || "Failed to save";
+      if (msg === "VALIDATION") return;
+      if (/TEACHER_NO_TAKEN/.test(msg)) {
+        setErrors((er) => ({ ...er, teacher_no: "Teacher ID already exists." }));
+        toast.error("Teacher ID already exists");
+      } else if (/EMAIL_TAKEN/.test(msg) || /already registered|already exists|duplicate/i.test(msg)) {
+        setErrors((er) => ({ ...er, email: "Email already exists." }));
+        toast.error("Email already exists");
+      } else if (/invalid.*email/i.test(msg)) toast.error("Invalid email");
       else if (/password/i.test(msg) && /weak|short|length/i.test(msg)) toast.error("Password too weak");
-      else toast.error(msg);
+      else toast.error(msg.replace(/^[A-Z_]+:\s*/, ""));
     },
   });
 

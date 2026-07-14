@@ -87,6 +87,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Auto-logout when the signed-in user's profile is marked inactive elsewhere
+  // (e.g., admin deactivates a teacher account while the teacher is logged in).
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`profile-status-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        async (payload) => {
+          const next = (payload.new as { status?: string } | null)?.status;
+          if (next === "inactive") {
+            const isTeacher = rolesRef.current.includes("teacher");
+            const isStudent = rolesRef.current.includes("student");
+            const who = isTeacher ? "teacher" : isStudent ? "student" : "";
+            toast.error(
+              who
+                ? `Your ${who} account is inactive. Please contact the administrator for assistance.`
+                : "Your account is inactive. Please contact the administrator for assistance.",
+            );
+            try { await supabase.auth.signOut(); } catch { /* ignore */ }
+          }
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };

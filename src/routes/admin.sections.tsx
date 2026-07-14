@@ -167,6 +167,16 @@ function SectionsPage() {
           </TableBody>
         </Table>
       </div>
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(v) => { if (!v) setToDelete(null); }}
+        title="Delete this section?"
+        description={<>Are you sure you want to delete <span className="font-medium">{toDelete?.name}</span>? This action cannot be undone and may affect linked schedules or students.</>}
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        loadingLabel="Deleting…"
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id, { onSettled: () => setToDelete(null) }); }}
+      />
     </div>
   );
 }

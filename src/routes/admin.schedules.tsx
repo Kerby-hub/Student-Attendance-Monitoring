@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, MapPin, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { RequiredMark, FieldError, invalidInputClass } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
-import { useAcademicYears, useSemesters, useCurrentSemester } from "@/lib/academic/hooks";
+import { useAcademicYears, useCurrentSemester } from "@/lib/academic/hooks";
 
 
 export const Route = createFileRoute("/admin/schedules")({

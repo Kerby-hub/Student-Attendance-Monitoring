@@ -364,11 +364,19 @@ function EventFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial?.id]);
 
+  const initialDate = start.date;
   const submit = () => {
     if (submitting) return; // guard against double-submit
     const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = "Event title is required.";
     if (!date) errs.date = "Start date is required.";
+    // Past-date guard: allow keeping an existing past date, but block creating
+    // or moving events to a date earlier than today.
+    const todayStr = ymd(new Date());
+    const isNewOrDateChanged = !initial?.id || date !== initialDate;
+    if (date && isNewOrDateChanged && date < todayStr) {
+      errs.date = "Event date cannot be in the past.";
+    }
     const startsIso = date ? combineDateTime(date, startTime) : "";
     const endsIso = date ? combineDateTime(endDate || date, endTime) : "";
     if (startsIso && endsIso && new Date(endsIso) <= new Date(startsIso)) {

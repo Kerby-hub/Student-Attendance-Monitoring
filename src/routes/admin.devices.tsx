@@ -212,6 +212,18 @@ function DevicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!resetTarget}
+        onOpenChange={(v) => { if (!v) setResetTarget(null); }}
+        title="Reset device binding?"
+        description={<>Reset the device for <span className="font-medium">{resetTarget?.profile?.email}</span>? They will be able to register a new device on their next login.</>}
+        confirmLabel="Reset device"
+        destructive={false}
+        loading={resetDevice.isPending}
+        loadingLabel="Resetting…"
+        onConfirm={() => { if (resetTarget) { const r = resetTarget; resetDevice.mutate(r, { onSettled: () => setResetTarget(null) }); } }}
+      />
     </div>
   );
 }

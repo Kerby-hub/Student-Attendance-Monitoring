@@ -113,7 +113,11 @@ function SubjectsPage() {
       toast.success("Subject deleted");
       qc.invalidateQueries({ queryKey: ["subjects"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      if (/foreign key|violates|referenced/i.test(e.message))
+        toast.error("This subject is linked to schedules and cannot be deleted. Archive it instead.");
+      else toast.error(e.message);
+    },
   });
 
   const openCreate = () => {

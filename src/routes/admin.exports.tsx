@@ -30,7 +30,7 @@ function ExportCenter() {
   const today = todayIso();
   const [type, setType] = useState<ReportType>("attendance");
   const [filters, setFilters] = useState<FilterValue>({
-    from: today, to: today, teacherId: "", sectionId: "", studentId: "",
+    from: today, to: today, teacherId: "", sectionId: "", studentId: "", academicYearId: "", semesterId: "",
   });
 
   const { data: rows = [], isFetching, error, refetch } = useQuery({

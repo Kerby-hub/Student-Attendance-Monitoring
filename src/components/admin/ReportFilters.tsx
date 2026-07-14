@@ -5,13 +5,17 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useAcademicYears, useSemesters, useCurrentSemester } from "@/lib/academic/hooks";
+import { useEffect } from "react";
 
 export interface FilterValue {
   from: string;
   to: string;
-  teacherId: string; // "" = all
+  teacherId: string;
   sectionId: string;
   studentId: string;
+  academicYearId: string; // "" = all
+  semesterId: string; // "" = all
 }
 
 interface Props {
@@ -21,6 +25,22 @@ interface Props {
 }
 
 export function ReportFilters({ value, onChange, showDateRange = true }: Props) {
+  const { data: years = [] } = useAcademicYears();
+  const { data: allSemesters = [] } = useSemesters(value.academicYearId || undefined);
+  const { data: currentSemester } = useCurrentSemester();
+
+  // Default to current semester the first time we load, if caller hasn't set one.
+  useEffect(() => {
+    if (!value.semesterId && !value.academicYearId && currentSemester) {
+      onChange({
+        ...value,
+        academicYearId: currentSemester.academic_year_id,
+        semesterId: currentSemester.id,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSemester?.id]);
+
   const { data: teachers = [] } = useQuery({
     queryKey: ["filter-teachers"],
     queryFn: async () => {
@@ -57,7 +77,7 @@ export function ReportFilters({ value, onChange, showDateRange = true }: Props) 
   const set = (patch: Partial<FilterValue>) => onChange({ ...value, ...patch });
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
       {showDateRange && (
         <>
           <div>
@@ -70,6 +90,29 @@ export function ReportFilters({ value, onChange, showDateRange = true }: Props) 
           </div>
         </>
       )}
+      <div>
+        <Label>Academic year</Label>
+        <Select
+          value={value.academicYearId || "all"}
+          onValueChange={(v) => set({ academicYearId: v === "all" ? "" : v, semesterId: "" })}
+        >
+          <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All years</SelectItem>
+            {years.map((y) => <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Semester</Label>
+        <Select value={value.semesterId || "all"} onValueChange={(v) => set({ semesterId: v === "all" ? "" : v })}>
+          <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All semesters</SelectItem>
+            {allSemesters.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
       <div>
         <Label>Teacher</Label>
         <Select value={value.teacherId || "all"} onValueChange={(v) => set({ teacherId: v === "all" ? "" : v })}>

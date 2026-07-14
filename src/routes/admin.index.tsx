@@ -12,6 +12,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/StatCard";
+import { Badge } from "@/components/ui/badge";
+import { CalendarRange, AlertTriangle } from "lucide-react";
+import { useCurrentAcademicYear, useCurrentSemester } from "@/lib/academic/hooks";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboardPage,
@@ -214,9 +217,12 @@ function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Real-time overview of attendance across the institution.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Real-time overview of attendance across the institution.</p>
+        </div>
+        <CurrentPeriodChip />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -355,6 +361,34 @@ function AdminDashboardPage() {
     </div>
   );
 }
+
+function CurrentPeriodChip() {
+  const { data: year } = useCurrentAcademicYear();
+  const { data: sem } = useCurrentSemester();
+  if (!year && !sem) {
+    return (
+      <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-xs">
+        <p className="flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="h-3.5 w-3.5" /> No current semester set
+        </p>
+        <Link to="/admin/academic" className="text-amber-700 underline dark:text-amber-400">
+          Set up in Academic Management →
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <Link to="/admin/academic" className="rounded-lg border bg-card px-3 py-2 text-xs hover:bg-muted">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Current academic period</p>
+      <p className="flex items-center gap-2 font-semibold">
+        <CalendarRange className="h-3.5 w-3.5" />
+        {year?.name ?? "—"}
+        {sem && <Badge variant="secondary" className="text-[10px]">{sem.name}</Badge>}
+      </p>
+    </Link>
+  );
+}
+
 
 
 function EmptyChart() {

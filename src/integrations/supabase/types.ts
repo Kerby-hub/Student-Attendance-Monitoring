@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          is_current: boolean
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["academic_year_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["academic_year_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["academic_year_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in_at: string | null
@@ -241,6 +274,7 @@ export type Database = {
       }
       class_schedules: {
         Row: {
+          academic_year_id: string | null
           created_at: string
           day: Database["public"]["Enums"]["day_of_week"]
           end_time: string
@@ -249,12 +283,14 @@ export type Database = {
           school_year: string
           section_id: string
           semester: string
+          semester_id: string | null
           start_time: string
           subject_id: string
           teacher_id: string
           updated_at: string
         }
         Insert: {
+          academic_year_id?: string | null
           created_at?: string
           day: Database["public"]["Enums"]["day_of_week"]
           end_time: string
@@ -263,12 +299,14 @@ export type Database = {
           school_year: string
           section_id: string
           semester: string
+          semester_id?: string | null
           start_time: string
           subject_id: string
           teacher_id: string
           updated_at?: string
         }
         Update: {
+          academic_year_id?: string | null
           created_at?: string
           day?: Database["public"]["Enums"]["day_of_week"]
           end_time?: string
@@ -277,6 +315,7 @@ export type Database = {
           school_year?: string
           section_id?: string
           semester?: string
+          semester_id?: string | null
           start_time?: string
           subject_id?: string
           teacher_id?: string
@@ -284,10 +323,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "class_schedules_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "class_schedules_section_id_fkey"
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_schedules_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semesters"
             referencedColumns: ["id"]
           },
           {
@@ -589,6 +642,50 @@ export type Database = {
         }
         Relationships: []
       }
+      semesters: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          is_current: boolean
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["semester_status"]
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["semester_status"]
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          is_current?: boolean
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["semester_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "semesters_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_logs: {
         Row: {
           broadcast_id: string | null
@@ -649,6 +746,71 @@ export type Database = {
           },
           {
             foreignKeyName: "sms_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_enrollments: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          section_id: string
+          semester_id: string
+          status: Database["public"]["Enums"]["enrollment_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          section_id: string
+          semester_id: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          section_id?: string
+          semester_id?: string
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_enrollments_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollments_semester_id_fkey"
+            columns: ["semester_id"]
+            isOneToOne: false
+            referencedRelation: "semesters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_enrollments_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -993,6 +1155,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      copy_students_to_semester: {
+        Args: {
+          _source_section_id: string
+          _source_semester_id: string
+          _target_section_id: string
+          _target_semester_id: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1013,6 +1184,7 @@ export type Database = {
       }
     }
     Enums: {
+      academic_year_status: "active" | "archived"
       app_role: "admin" | "teacher" | "student"
       attendance_status: "present" | "late" | "absent"
       calendar_audience: "all" | "teachers" | "students"
@@ -1024,6 +1196,8 @@ export type Database = {
         | "friday"
         | "saturday"
         | "sunday"
+      enrollment_status: "active" | "completed" | "transferred" | "inactive"
+      semester_status: "draft" | "active" | "closed" | "archived"
       session_status: "waiting" | "open" | "closed" | "expired"
       sms_status: "pending" | "sent" | "failed"
       student_status: "active" | "inactive" | "graduated" | "archived"
@@ -1155,6 +1329,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      academic_year_status: ["active", "archived"],
       app_role: ["admin", "teacher", "student"],
       attendance_status: ["present", "late", "absent"],
       calendar_audience: ["all", "teachers", "students"],
@@ -1167,6 +1342,8 @@ export const Constants = {
         "saturday",
         "sunday",
       ],
+      enrollment_status: ["active", "completed", "transferred", "inactive"],
+      semester_status: ["draft", "active", "closed", "archived"],
       session_status: ["waiting", "open", "closed", "expired"],
       sms_status: ["pending", "sent", "failed"],
       student_status: ["active", "inactive", "graduated", "archived"],

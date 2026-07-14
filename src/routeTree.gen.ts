@@ -50,6 +50,7 @@ import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminBroadcastRouteImport } from './routes/admin.broadcast'
 import { Route as AdminAuditLogsRouteImport } from './routes/admin.audit-logs'
+import { Route as AdminAcademicRouteImport } from './routes/admin.academic'
 import { Route as TeacherAttendanceSessionScheduleIdRouteImport } from './routes/teacher.attendance-session.$scheduleId'
 import { Route as AdminStudentsIdRouteImport } from './routes/admin.students.$id'
 import { Route as ApiPublicHooksDispatchSmsRouteImport } from './routes/api/public/hooks/dispatch-sms'
@@ -259,6 +260,11 @@ const AdminAuditLogsRoute = AdminAuditLogsRouteImport.update({
   path: '/audit-logs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAcademicRoute = AdminAcademicRouteImport.update({
+  id: '/academic',
+  path: '/academic',
+  getParentRoute: () => AdminRoute,
+} as any)
 const TeacherAttendanceSessionScheduleIdRoute =
   TeacherAttendanceSessionScheduleIdRouteImport.update({
     id: '/attendance-session/$scheduleId',
@@ -288,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/teacher': typeof TeacherRouteWithChildren
+  '/admin/academic': typeof AdminAcademicRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/admin/academic': typeof AdminAcademicRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -378,6 +386,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/student': typeof StudentRouteWithChildren
   '/teacher': typeof TeacherRouteWithChildren
+  '/admin/academic': typeof AdminAcademicRoute
   '/admin/audit-logs': typeof AdminAuditLogsRoute
   '/admin/broadcast': typeof AdminBroadcastRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/student'
     | '/teacher'
+    | '/admin/academic'
     | '/admin/audit-logs'
     | '/admin/broadcast'
     | '/admin/calendar'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/reset-password'
+    | '/admin/academic'
     | '/admin/audit-logs'
     | '/admin/broadcast'
     | '/admin/calendar'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/student'
     | '/teacher'
+    | '/admin/academic'
     | '/admin/audit-logs'
     | '/admin/broadcast'
     | '/admin/calendar'
@@ -854,6 +866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditLogsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/academic': {
+      id: '/admin/academic'
+      path: '/academic'
+      fullPath: '/admin/academic'
+      preLoaderRoute: typeof AdminAcademicRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/teacher/attendance-session/$scheduleId': {
       id: '/teacher/attendance-session/$scheduleId'
       path: '/attendance-session/$scheduleId'
@@ -891,6 +910,7 @@ const AdminStudentsRouteWithChildren = AdminStudentsRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAcademicRoute: typeof AdminAcademicRoute
   AdminAuditLogsRoute: typeof AdminAuditLogsRoute
   AdminBroadcastRoute: typeof AdminBroadcastRoute
   AdminCalendarRoute: typeof AdminCalendarRoute
@@ -913,6 +933,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAcademicRoute: AdminAcademicRoute,
   AdminAuditLogsRoute: AdminAuditLogsRoute,
   AdminBroadcastRoute: AdminBroadcastRoute,
   AdminCalendarRoute: AdminCalendarRoute,
@@ -997,13 +1018,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, Play } from "lucide-react";
+import { CalendarClock, Play, CalendarRange } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useCurrentSemester, useCurrentAcademicYear } from "@/lib/academic/hooks";
 
 export const Route = createFileRoute("/teacher/")({
   component: TeacherDashboard,
@@ -18,9 +19,11 @@ function TeacherDashboard() {
   const { user, hasRole } = useAuth();
   const isAdmin = hasRole("admin");
   const today = DAYS[new Date().getDay()];
+  const { data: currentSemester } = useCurrentSemester();
+  const { data: currentYear } = useCurrentAcademicYear();
 
   const { data: schedules = [], isLoading } = useQuery({
-    queryKey: ["teacher-today", user?.id, today],
+    queryKey: ["teacher-today", user?.id, today, currentSemester?.id],
     enabled: !!user,
     queryFn: async () => {
       let query = supabase
@@ -33,6 +36,7 @@ function TeacherDashboard() {
         `)
         .eq("day", today)
         .order("start_time");
+      if (currentSemester?.id) query = query.eq("semester_id", currentSemester.id);
       const { data, error } = await query;
       if (error) throw error;
       if (isAdmin) return data as any[];
@@ -42,7 +46,18 @@ function TeacherDashboard() {
 
   return (
     <div>
-      <PageHeader title="Today's classes" description={`Showing schedules for ${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`} />
+      <PageHeader
+        title="Today's classes"
+        description={`Showing schedules for ${new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}`}
+        action={
+          currentSemester ? (
+            <Badge variant="outline" className="gap-1.5">
+              <CalendarRange className="h-3.5 w-3.5" />
+              {currentYear?.name} · {currentSemester.name}
+            </Badge>
+          ) : null
+        }
+      />
       {isLoading ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : schedules.length === 0 ? (

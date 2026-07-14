@@ -52,7 +52,7 @@ function ReportsPage() {
   const [tab, setTab] = useState("detailed");
   const today = todayIso();
   const [filters, setFilters] = useState<FilterValue>({
-    from: today, to: today, teacherId: "", sectionId: "", studentId: "",
+    from: today, to: today, teacherId: "", sectionId: "", studentId: "", academicYearId: "", semesterId: "",
   });
 
   return (

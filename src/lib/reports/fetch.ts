@@ -13,7 +13,7 @@ export async function fetchAttendance(filters: FilterValue): Promise<AttendanceF
         teacher_id,
         teachers:teachers!attendance_sessions_teacher_id_fkey(full_name),
         class_schedules:class_schedules!attendance_sessions_schedule_id_fkey(
-          section_id,
+          section_id, semester_id, academic_year_id,
           sections:sections!class_schedules_section_id_fkey(id, name),
           subjects:subjects!class_schedules_subject_id_fkey(code, name)
         )
@@ -29,7 +29,7 @@ export async function fetchAttendance(filters: FilterValue): Promise<AttendanceF
   const { data, error } = await q;
   if (error) throw error;
 
-  let rows: AttendanceFlatRow[] = (data ?? []).map((r: any) => ({
+  let rows: (AttendanceFlatRow & { semester_id: string | null; academic_year_id: string | null })[] = (data ?? []).map((r: any) => ({
     date: r.check_in_at?.slice(0, 10) ?? "",
     time: r.check_in_at?.slice(11, 16) ?? "",
     student_id: r.students?.id ?? "",
@@ -43,10 +43,14 @@ export async function fetchAttendance(filters: FilterValue): Promise<AttendanceF
     teacher_id: r.attendance_sessions?.teacher_id ?? null,
     teacher: r.attendance_sessions?.teachers?.full_name ?? "",
     status: r.status,
+    semester_id: r.attendance_sessions?.class_schedules?.semester_id ?? null,
+    academic_year_id: r.attendance_sessions?.class_schedules?.academic_year_id ?? null,
   }));
 
   if (filters.teacherId) rows = rows.filter((r) => r.teacher_id === filters.teacherId);
   if (filters.sectionId) rows = rows.filter((r) => r.section_id === filters.sectionId);
+  if (filters.semesterId) rows = rows.filter((r) => r.semester_id === filters.semesterId);
+  else if (filters.academicYearId) rows = rows.filter((r) => r.academic_year_id === filters.academicYearId);
 
   return rows;
 }

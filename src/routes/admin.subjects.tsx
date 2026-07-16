@@ -41,6 +41,8 @@ function SubjectsPage() {
   const [form, setForm] = useState({
     code: "", name: "", description: "", units: 3, department_id: "" as string | "",
   });
+  const [search, setSearch] = useState("");
+  const [fDept, setFDept] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["subjects"],

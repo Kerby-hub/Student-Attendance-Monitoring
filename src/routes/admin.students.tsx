@@ -179,7 +179,11 @@ function StudentsPage() {
       e.guardian_email = "Invalid guardian email.";
     if (form.emergency_contact_phone.trim() && !normalizePhPhone(form.emergency_contact_phone))
       e.emergency_contact_phone = "Invalid PH mobile number.";
+    if (!form.section_id) e.section_id = "Please select a section.";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+    }
     return Object.keys(e).length === 0;
   }
 

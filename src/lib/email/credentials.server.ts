@@ -27,18 +27,29 @@ export interface SendCredentialsResult {
 
 function buildEmail(input: SendCredentialsInput) {
   const subject = "Your Student Attendance Monitoring System Account";
+  const safeName = input.toName.replace(/</g, "&lt;");
+  const safeEmail = input.toEmail.replace(/</g, "&lt;");
+  const safePwd = input.tempPassword.replace(/</g, "&lt;");
+  const safeUrl = input.loginUrl.replace(/"/g, "&quot;");
   const text =
     `Hello ${input.toName},\n\n` +
     `An account has been created for you in the Student Attendance Monitoring System.\n\n` +
     `Login email: ${input.toEmail}\n` +
-    `Temporary password: ${input.tempPassword}\n` +
-    `Login page: ${input.loginUrl}\n\n` +
+    `Temporary password: ${input.tempPassword}\n\n` +
+    `Please activate your account by logging in using your email address and temporary password.\n` +
+    `Click here to proceed to the Login page: ${input.loginUrl}\n\n` +
     `For security, you will be required to change your password after your first login.\n` +
     `Please do not share this password with anyone.\n\nThank you.`;
-  const html = text
-    .split("\n")
-    .map((l) => (l ? `<p style="margin:0 0 8px">${l.replace(/</g, "&lt;")}</p>` : "<br/>"))
-    .join("");
+  const html =
+    `<div style="font-family:Arial,sans-serif;color:#111;line-height:1.5">` +
+    `<p>Hello ${safeName},</p>` +
+    `<p>An account has been created for you in the Student Attendance Monitoring System.</p>` +
+    `<p><strong>Login email:</strong> ${safeEmail}<br/>` +
+    `<strong>Temporary password:</strong> <code>${safePwd}</code></p>` +
+    `<p>Please activate your account by logging in using your email address and temporary password. ` +
+    `<a href="${safeUrl}">Click here</a> to proceed to the Login page.</p>` +
+    `<p style="color:#555;font-size:13px">For security, you will be required to change your password after your first login. Please do not share this password with anyone.</p>` +
+    `<p>Thank you.</p></div>`;
   return { subject, text, html };
 }
 

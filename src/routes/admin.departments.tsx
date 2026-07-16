@@ -139,6 +139,14 @@ function DepartmentsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search departments..."
+          className="max-w-sm"
+        />
+      </div>
       <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>

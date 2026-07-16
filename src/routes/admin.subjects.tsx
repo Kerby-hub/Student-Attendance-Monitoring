@@ -108,7 +108,11 @@ function SubjectsPage() {
     if (!form.code.trim()) e.code = "Code is required.";
     if (!form.name.trim()) e.name = "Name is required.";
     if (!Number.isFinite(form.units) || form.units <= 0) e.units = "Units must be greater than 0.";
+    if (!form.department_id) e.department_id = "Please select a department.";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+    }
     return Object.keys(e).length === 0;
   }
 

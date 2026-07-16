@@ -70,6 +70,10 @@ function SchedulesPage() {
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+  const [search, setSearch] = useState("");
+  const [fSection, setFSection] = useState<string>("all");
+  const [fSubject, setFSubject] = useState<string>("all");
+  const [fTeacher, setFTeacher] = useState<string>("all");
 
   const { data: years = [] } = useAcademicYears();
   const { data: currentSemester } = useCurrentSemester();

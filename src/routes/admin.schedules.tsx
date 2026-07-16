@@ -309,8 +309,9 @@ function SchedulesPage() {
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New schedule</Button></DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col gap-0 p-0">
+              <DialogHeader className="border-b px-6 py-4"><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
+              <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="grid gap-3 sm:grid-cols-2">
 
                 <div className="sm:col-span-2">

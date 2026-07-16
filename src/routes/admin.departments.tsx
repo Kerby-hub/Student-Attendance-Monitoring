@@ -144,12 +144,27 @@ function DepartmentsPage() {
           <TableHeader>
             <TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead className="w-32"></TableHead></TableRow>
           </TableHeader>
+      <div className="mb-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search departments..."
+          className="max-w-sm"
+        />
+      </div>
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead className="w-32"></TableHead></TableRow>
+          </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No departments yet.</TableCell></TableRow>
-            ) : data.map((d) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                {search ? "No departments match your search." : "No departments yet."}
+              </TableCell></TableRow>
+            ) : filtered.map((d) => (
               <TableRow key={d.id}>
                 <TableCell className="font-mono text-sm">{d.code}</TableCell>
                 <TableCell>{d.name}</TableCell>

@@ -138,6 +138,7 @@ function UsersPage() {
           fullName: form.fullName,
           role: form.role,
           status: form.status,
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
           studentData: form.role === "student" ? {
             student_no: form.student_no, program: form.program, year_level: form.year_level,
             contact_number: form.contact_number, parent_contact: form.parent_contact,

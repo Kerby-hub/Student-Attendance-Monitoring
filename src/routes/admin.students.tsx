@@ -285,6 +285,7 @@ function StudentsPage() {
           fullName: full || form.student_no,
           role: "student",
           status: "active",
+          origin: typeof window !== "undefined" ? window.location.origin : undefined,
           studentData: {
             student_no: form.student_no.trim(),
             program: form.program || undefined,
@@ -456,7 +457,7 @@ function StudentsPage() {
                   <Select value={form.section_id || "none"} onValueChange={(v) => setForm({ ...form, section_id: v === "none" ? "" : v })}>
                     <SelectTrigger><SelectValue placeholder="Select Section" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">—</SelectItem>
+                      <SelectItem value="none">No Section</SelectItem>
                       {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

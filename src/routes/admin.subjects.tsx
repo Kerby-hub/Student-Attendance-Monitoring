@@ -243,7 +243,14 @@ function SubjectsPage() {
             {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        {(search || fDept !== "all") && (
+        <Select value={fProgram} onValueChange={setFProgram}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {subjectPrograms.programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fDept !== "all" || fProgram !== "all") && (
           <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
         )}
       </div>

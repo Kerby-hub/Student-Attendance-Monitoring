@@ -52,6 +52,7 @@ function eventTypeColor(t: string | null): string {
 function TeacherCalendarPage() {
   const [cursor, setCursor] = useState(new Date());
   const [viewing, setViewing] = useState<EventRow | null>(null);
+  const [dayDetail, setDayDetail] = useState<string | null>(null);
 
   const monthFrom = startOfMonth(cursor);
   const monthTo = new Date(endOfMonth(cursor).getTime() + 86400000);

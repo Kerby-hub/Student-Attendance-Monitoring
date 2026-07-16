@@ -158,7 +158,12 @@ function TeacherCalendarPage() {
                       </button>
                     ))}
                     {dayEvents.length > 3 && (
-                      <p className="px-1 text-[10px] text-muted-foreground">+{dayEvents.length - 3} more</p>
+                      <button
+                        onClick={() => setDayDetail(k)}
+                        className="w-full rounded px-1 text-left text-[10px] font-medium text-primary hover:underline"
+                      >
+                        +{dayEvents.length - 3} more
+                      </button>
                     )}
                   </div>
                 </div>

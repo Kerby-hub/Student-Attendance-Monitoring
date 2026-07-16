@@ -202,6 +202,24 @@ function SubjectsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search subjects..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fDept} onValueChange={setFDept}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fDept !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -214,9 +232,11 @@ function SubjectsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No subjects yet.</TableCell></TableRow>
-            ) : data.map((s) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No subjects yet." : "No subjects match your search or filters."}
+              </TableCell></TableRow>
+            ) : filtered.map((s) => (
               <TableRow key={s.id} className={s.archived ? "opacity-60" : ""}>
                 <TableCell className="font-mono text-sm">{s.code}</TableCell>
                 <TableCell>{s.name}</TableCell>

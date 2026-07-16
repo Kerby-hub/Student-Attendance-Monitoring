@@ -67,6 +67,7 @@ function AdminCalendarPage() {
   const [creating, setCreating] = useState<{ date?: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<EventRow | null>(null);
   const [viewing, setViewing] = useState<EventRow | null>(null);
+  const [dayDetail, setDayDetail] = useState<string | null>(null);
 
   const monthFrom = startOfMonth(cursor);
   const monthTo = new Date(endOfMonth(cursor).getTime() + 86400000);

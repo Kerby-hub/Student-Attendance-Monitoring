@@ -37,6 +37,9 @@ function SectionsPage() {
   const [form, setForm] = useState({
     name: "", program: "", year_level: 1, school_year: "2025-2026",
   });
+  const [search, setSearch] = useState("");
+  const [fProgram, setFProgram] = useState<string>("all");
+  const [fYear, setFYear] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["sections"],
@@ -46,6 +49,30 @@ function SectionsPage() {
       return data as Section[];
     },
   });
+
+  const programOptions = useMemo(
+    () => Array.from(new Set(data.map((s) => s.program).filter((p): p is string => !!p))).sort(),
+    [data],
+  );
+  const yearOptions = useMemo(
+    () => Array.from(new Set(data.map((s) => s.year_level).filter((y): y is number => y != null))).sort((a, b) => a - b),
+    [data],
+  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.filter((s) => {
+      if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
+      if (fYear !== "all" && String(s.year_level ?? "") !== fYear) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.program ?? "").toLowerCase().includes(q) ||
+        String(s.year_level ?? "").includes(q) ||
+        s.school_year.toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, fProgram, fYear]);
+  const resetFilters = () => { setSearch(""); setFProgram("all"); setFYear("all"); };
 
   function validate(): boolean {
     const e: Record<string, string> = {};

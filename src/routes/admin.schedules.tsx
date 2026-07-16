@@ -112,6 +112,20 @@ function SchedulesPage() {
     queryKey: ["zones-for-schedule"],
     queryFn: async () => (await supabase.from("geofence_zones").select("id, name, radius_meters").eq("active", true).order("name")).data ?? [],
   });
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments-for-schedule"],
+    queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
+  });
+  // Distinct Program/Course values pulled from sections. Used both to populate
+  // the Program filter and to filter schedules whose section.program matches.
+  const programOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of data) {
+      const p = s.sections?.program?.trim();
+      if (p) set.add(p);
+    }
+    return Array.from(set).sort();
+  }, [data]);
 
   // Group schedule rows that share the same class + time + term + room so a
   // multi-day schedule shows as one row with all its days.
@@ -143,16 +157,25 @@ function SchedulesPage() {
       if (fSection !== "all" && s.section_id !== fSection) return false;
       if (fSubject !== "all" && s.subject_id !== fSubject) return false;
       if (fTeacher !== "all" && s.teacher_id !== fTeacher) return false;
+      if (fDept !== "all") {
+        const subjDept = s.subjects?.department_id ?? null;
+        const secDept = s.sections?.department_id ?? null;
+        if (subjDept !== fDept && secDept !== fDept) return false;
+      }
+      if (fProgram !== "all" && (s.sections?.program ?? "") !== fProgram) return false;
       if (!q) return true;
       const hay = [
         s.subjects?.code, s.subjects?.name, s.teachers?.full_name,
-        s.sections?.name, s.room, s.start_time, s.end_time,
+        s.sections?.name, s.sections?.program, s.room, s.start_time, s.end_time,
         g.days.join(","),
       ].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
-  }, [groups, search, fSection, fSubject, fTeacher]);
-  const resetFilters = () => { setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all"); };
+  }, [groups, search, fSection, fSubject, fTeacher, fDept, fProgram]);
+  const resetFilters = () => {
+    setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all");
+    setFDept("all"); setFProgram("all");
+  };
 
   const upsert = useMutation({
     mutationFn: async () => {

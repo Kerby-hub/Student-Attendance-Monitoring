@@ -41,9 +41,9 @@ type Schedule = {
   semester: string; school_year: string;
   academic_year_id: string | null;
   semester_id: string | null;
-  subjects?: { code: string; name: string } | null;
+  subjects?: { code: string; name: string; department_id: string | null } | null;
   teachers?: { full_name: string } | null;
-  sections?: { name: string } | null;
+  sections?: { name: string; program: string | null; department_id?: string | null } | null;
   schedule_geofences?: { zone_id: string; geofence_zones: { name: string } | null }[];
 };
 
@@ -74,6 +74,8 @@ function SchedulesPage() {
   const [fSection, setFSection] = useState<string>("all");
   const [fSubject, setFSubject] = useState<string>("all");
   const [fTeacher, setFTeacher] = useState<string>("all");
+  const [fDept, setFDept] = useState<string>("all");
+  const [fProgram, setFProgram] = useState<string>("all");
 
   const { data: years = [] } = useAcademicYears();
   const { data: currentSemester } = useCurrentSemester();
@@ -84,7 +86,8 @@ function SchedulesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_schedules")
-        .select("*, subjects(code,name), teachers(full_name), sections(name), schedule_geofences(zone_id, geofence_zones(name))")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .select("*, subjects(code,name,department_id), teachers(full_name), sections(name,program,department_id), schedule_geofences(zone_id, geofence_zones(name))" as any)
         .order("school_year", { ascending: false })
         .order("day")
         .order("start_time");

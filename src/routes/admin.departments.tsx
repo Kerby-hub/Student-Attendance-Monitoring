@@ -31,6 +31,7 @@ function DepartmentsPage() {
   const [toDelete, setToDelete] = useState<Dept | null>(null);
   const [form, setForm] = useState({ name: "", code: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   const { data = [], isLoading } = useQuery({
@@ -40,6 +41,12 @@ function DepartmentsPage() {
       if (error) throw error;
       return data as Dept[];
     },
+  });
+
+  const filtered = data.filter((d) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q);
   });
 
   function validate() {
@@ -132,6 +139,22 @@ function DepartmentsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search departments..."
+          className="max-w-sm"
+        />
+      </div>
+      <div className="mb-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search departments..."
+          className="max-w-sm"
+        />
+      </div>
       <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>
@@ -140,9 +163,11 @@ function DepartmentsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">No departments yet.</TableCell></TableRow>
-            ) : data.map((d) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                {search ? "No departments match your search." : "No departments yet."}
+              </TableCell></TableRow>
+            ) : filtered.map((d) => (
               <TableRow key={d.id}>
                 <TableCell className="font-mono text-sm">{d.code}</TableCell>
                 <TableCell>{d.name}</TableCell>

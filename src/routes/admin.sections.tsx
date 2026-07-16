@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -12,6 +12,9 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -34,6 +37,9 @@ function SectionsPage() {
   const [form, setForm] = useState({
     name: "", program: "", year_level: 1, school_year: "2025-2026",
   });
+  const [search, setSearch] = useState("");
+  const [fProgram, setFProgram] = useState<string>("all");
+  const [fYear, setFYear] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["sections"],
@@ -43,6 +49,30 @@ function SectionsPage() {
       return data as Section[];
     },
   });
+
+  const programOptions = useMemo(
+    () => Array.from(new Set(data.map((s) => s.program).filter((p): p is string => !!p))).sort(),
+    [data],
+  );
+  const yearOptions = useMemo(
+    () => Array.from(new Set(data.map((s) => s.year_level).filter((y): y is number => y != null))).sort((a, b) => a - b),
+    [data],
+  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.filter((s) => {
+      if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
+      if (fYear !== "all" && String(s.year_level ?? "") !== fYear) return false;
+      if (!q) return true;
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.program ?? "").toLowerCase().includes(q) ||
+        String(s.year_level ?? "").includes(q) ||
+        s.school_year.toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, fProgram, fYear]);
+  const resetFilters = () => { setSearch(""); setFProgram("all"); setFYear("all"); };
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -142,6 +172,31 @@ function SectionsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search sections..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fProgram} onValueChange={setFProgram}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fYear} onValueChange={setFYear}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Year Levels" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Year Levels</SelectItem>
+            {yearOptions.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fProgram !== "all" || fYear !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -154,9 +209,11 @@ function SectionsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No sections yet.</TableCell></TableRow>
-            ) : data.map((s) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No sections yet." : "No sections match your search or filters."}
+              </TableCell></TableRow>
+            ) : filtered.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell>{s.program ?? "—"}</TableCell>

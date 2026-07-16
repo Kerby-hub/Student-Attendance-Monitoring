@@ -124,10 +124,35 @@ function GeofencingPage() {
   };
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) return toast.error("Geolocation not supported");
+    if (!navigator.geolocation) return toast.error("Geolocation is not supported by this browser.");
+    const loading = toast.loading("Detecting your current location…");
     navigator.geolocation.getCurrentPosition(
-      (pos) => setForm((f) => ({ ...f, center_lat: pos.coords.latitude, center_lng: pos.coords.longitude })),
-      (err) => toast.error("Couldn't get location", { description: err.message }),
+      (pos) => {
+        toast.dismiss(loading);
+        const { latitude, longitude, accuracy } = pos.coords;
+        setForm((f) => ({ ...f, center_lat: latitude, center_lng: longitude }));
+        clearErr("center_lat"); clearErr("center_lng");
+        if (typeof accuracy === "number" && accuracy > 75) {
+          toast.warning("Location accuracy is low", {
+            description: `Detected within ~${Math.round(accuracy)}m. Please move to an open area or manually pin the location.`,
+          });
+        } else {
+          toast.success(`Location detected${typeof accuracy === "number" ? ` (±${Math.round(accuracy)}m)` : ""}`);
+        }
+      },
+      (err) => {
+        toast.dismiss(loading);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error("Location permission denied", { description: "Please allow location access, or pin the location manually on the map." });
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          toast.error("Location unavailable", { description: "Your device could not determine a location. Please pin it manually." });
+        } else if (err.code === err.TIMEOUT) {
+          toast.error("Location request timed out", { description: "Please try again or pin the location manually." });
+        } else {
+          toast.error("Couldn't get location", { description: err.message });
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   };
 

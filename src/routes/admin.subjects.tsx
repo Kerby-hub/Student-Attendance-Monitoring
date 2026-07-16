@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +41,8 @@ function SubjectsPage() {
   const [form, setForm] = useState({
     code: "", name: "", description: "", units: 3, department_id: "" as string | "",
   });
+  const [search, setSearch] = useState("");
+  const [fDept, setFDept] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["subjects"],
@@ -58,6 +61,20 @@ function SubjectsPage() {
       return data as { id: string; name: string }[];
     },
   });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.filter((s) => {
+      if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
+      if (!q) return true;
+      return (
+        s.code.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        (s.description ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, fDept]);
+  const resetFilters = () => { setSearch(""); setFDept("all"); };
 
   function validate() {
     const e: Record<string, string> = {};
@@ -166,7 +183,7 @@ function SubjectsPage() {
                 <div className="sm:col-span-2">
                   <Label>Department</Label>
                   <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
@@ -185,6 +202,24 @@ function SubjectsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search subjects..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fDept} onValueChange={setFDept}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fDept !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -197,9 +232,11 @@ function SubjectsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No subjects yet.</TableCell></TableRow>
-            ) : data.map((s) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No subjects yet." : "No subjects match your search or filters."}
+              </TableCell></TableRow>
+            ) : filtered.map((s) => (
               <TableRow key={s.id} className={s.archived ? "opacity-60" : ""}>
                 <TableCell className="font-mono text-sm">{s.code}</TableCell>
                 <TableCell>{s.name}</TableCell>

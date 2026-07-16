@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, MapPin, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/PageHeader";
@@ -70,6 +70,10 @@ function SchedulesPage() {
   const [zoneIds, setZoneIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
+  const [search, setSearch] = useState("");
+  const [fSection, setFSection] = useState<string>("all");
+  const [fSubject, setFSubject] = useState<string>("all");
+  const [fTeacher, setFTeacher] = useState<string>("all");
 
   const { data: years = [] } = useAcademicYears();
   const { data: currentSemester } = useCurrentSemester();
@@ -128,6 +132,24 @@ function SchedulesPage() {
       return { key: g.key, rows, days: rows.map((r) => r.day), first: rows[0] };
     });
   }, [data]);
+
+  const filteredGroups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return groups.filter((g) => {
+      const s = g.first;
+      if (fSection !== "all" && s.section_id !== fSection) return false;
+      if (fSubject !== "all" && s.subject_id !== fSubject) return false;
+      if (fTeacher !== "all" && s.teacher_id !== fTeacher) return false;
+      if (!q) return true;
+      const hay = [
+        s.subjects?.code, s.subjects?.name, s.teachers?.full_name,
+        s.sections?.name, s.room, s.start_time, s.end_time,
+        g.days.join(","),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [groups, search, fSection, fSubject, fTeacher]);
+  const resetFilters = () => { setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all"); };
 
   const upsert = useMutation({
     mutationFn: async () => {
@@ -396,6 +418,38 @@ function SchedulesPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search schedules..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fSection} onValueChange={setFSection}>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Sections" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sections</SelectItem>
+            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fSubject} onValueChange={setFSubject}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Subjects" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Subjects</SelectItem>
+            {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fTeacher} onValueChange={setFTeacher}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Teachers" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Teachers</SelectItem>
+            {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -410,9 +464,11 @@ function SchedulesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
-            ) : groups.map((g) => {
+            ) : filteredGroups.length === 0 ? (
+              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No schedules yet." : "No schedules match your search or filters."}
+              </TableCell></TableRow>
+            ) : filteredGroups.map((g) => {
               const s = g.first;
               const label = `${s.subjects?.code ?? ""} · ${s.sections?.name ?? ""}`;
               return (

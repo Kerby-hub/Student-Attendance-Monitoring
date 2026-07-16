@@ -84,7 +84,11 @@ function TeachersPage() {
     if (!form.full_name.trim()) e.full_name = "Full name is required.";
     if (!form.email.trim()) e.email = "Email is required.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Invalid email address.";
+    if (!form.department_id) e.department_id = "Please select a department.";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+    }
     return Object.keys(e).length === 0;
   }
 

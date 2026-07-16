@@ -311,6 +311,39 @@ function AdminCalendarPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!dayDetail} onOpenChange={(o) => !o && setDayDetail(null)}>
+        <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Events on {dayDetail ? new Date(dayDetail + "T00:00").toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : ""}
+            </DialogTitle>
+            <DialogDescription>
+              {dayDetail ? `${(byDay.get(dayDetail) ?? []).length} event${(byDay.get(dayDetail) ?? []).length === 1 ? "" : "s"}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {dayDetail && (byDay.get(dayDetail) ?? []).map((ev) => (
+              <button
+                key={ev.id}
+                onClick={() => { setViewing(ev); setDayDetail(null); }}
+                className="block w-full rounded-md border p-3 text-left transition hover:bg-accent"
+              >
+                <p className="font-medium">{ev.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {new Date(ev.starts_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {" – "}
+                  {new Date(ev.ends_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {ev.event_type && <Badge variant="secondary" className="text-[10px]">{ev.event_type}</Badge>}
+                  <Badge variant="outline" className="text-[10px] capitalize">{ev.audience}</Badge>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

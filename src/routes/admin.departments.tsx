@@ -31,6 +31,7 @@ function DepartmentsPage() {
   const [toDelete, setToDelete] = useState<Dept | null>(null);
   const [form, setForm] = useState({ name: "", code: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
   const clearErr = (k: string) => setErrors((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
   const { data = [], isLoading } = useQuery({
@@ -40,6 +41,12 @@ function DepartmentsPage() {
       if (error) throw error;
       return data as Dept[];
     },
+  });
+
+  const filtered = data.filter((d) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return d.name.toLowerCase().includes(q) || d.code.toLowerCase().includes(q);
   });
 
   function validate() {

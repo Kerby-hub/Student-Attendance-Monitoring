@@ -418,10 +418,12 @@ function SchedulesPage() {
                   )}
                 </div>
               </div>
-              <DialogFooter>
+              </div>
+              <DialogFooter className="border-t bg-background px-6 py-3">
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => {
+                    if (upsert.isPending) return;
                     const errs: Record<string, string> = {};
                     if (!form.subject_id) errs.subject_id = "Subject is required.";
                     if (!form.teacher_id) errs.teacher_id = "Teacher is required.";
@@ -435,7 +437,7 @@ function SchedulesPage() {
                     if (!form.semester_id) errs.semester_id = "Semester is required.";
                     if (!form.days || form.days.length === 0) errs.days = "Please select at least one day.";
                     setErrors(errs);
-                    if (Object.keys(errs).length === 0 && !upsert.isPending) upsert.mutate();
+                    if (Object.keys(errs).length === 0) upsert.mutate();
                   }}
                   disabled={upsert.isPending}
                 >{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>

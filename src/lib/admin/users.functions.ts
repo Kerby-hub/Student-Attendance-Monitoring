@@ -11,6 +11,8 @@ type CreateUserInput = {
   fullName: string;
   role: "admin" | "teacher" | "student";
   status: "active" | "inactive";
+  /** Origin of the calling browser, used to build the login URL in the credentials email. */
+  origin?: string;
   studentData?: {
     student_no: string;
     program?: string;
@@ -170,8 +172,17 @@ export const adminCreateUser = createServerFn({ method: "POST" })
 
     // 5) Credential email — provider resolved from Admin → Settings first,
     //    then EMAIL_PROVIDER env, finally stub. Supports stub/resend/smtp.
-    const appUrl = process.env.APP_PUBLIC_URL || process.env.SITE_URL || "";
-    const loginUrl = `${appUrl || "[your site]"}/login`;
+    //    Login URL priority: request origin (from browser) > APP_PUBLIC_URL >
+    //    APP_URL > SITE_URL env. Never emit "[your site]" — send a bare "/login"
+    //    only as a last resort so the anchor in the email still renders.
+    const rawOrigin =
+      data.origin?.trim() ||
+      process.env.APP_PUBLIC_URL ||
+      process.env.APP_URL ||
+      process.env.SITE_URL ||
+      "";
+    const origin = rawOrigin.replace(/\/+$/, "");
+    const loginUrl = origin ? `${origin}/login` : "/login";
     const { sendCredentialsEmail, resolveEmailProvider } = await import(
       "@/lib/email/credentials.server"
     );

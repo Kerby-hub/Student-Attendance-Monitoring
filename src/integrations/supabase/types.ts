@@ -615,6 +615,7 @@ export type Database = {
       sections: {
         Row: {
           created_at: string
+          department_id: string | null
           id: string
           name: string
           program: string | null
@@ -624,6 +625,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          department_id?: string | null
           id?: string
           name: string
           program?: string | null
@@ -633,6 +635,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          department_id?: string | null
           id?: string
           name?: string
           program?: string | null
@@ -640,7 +643,15 @@ export type Database = {
           updated_at?: string
           year_level?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sections_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       semesters: {
         Row: {

@@ -124,36 +124,75 @@ function GeofencingPage() {
   };
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) return toast.error("Geolocation is not supported by this browser.");
-    const loading = toast.loading("Detecting your current location…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        toast.dismiss(loading);
-        const { latitude, longitude, accuracy } = pos.coords;
+    if (!navigator.geolocation) {
+      return toast.error("Geolocation is not supported by this browser.");
+    }
+    const loading = toast.loading("Getting your current location…", {
+      description: "Sampling GPS readings for up to ~10s to find the most accurate fix.",
+    });
+    let best: GeolocationPosition | null = null;
+    let done = false;
+    let watchId: number | null = null;
+    const finish = (err?: GeolocationPositionError) => {
+      if (done) return;
+      done = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      toast.dismiss(loading);
+      if (best) {
+        const { latitude, longitude, accuracy } = best.coords;
         setForm((f) => ({ ...f, center_lat: latitude, center_lng: longitude }));
         clearErr("center_lat"); clearErr("center_lng");
         if (typeof accuracy === "number" && accuracy > 75) {
           toast.warning("Location accuracy is low", {
-            description: `Detected within ~${Math.round(accuracy)}m. Please move to an open area or manually pin the location.`,
+            description: `Detected within ~${Math.round(accuracy)}m. Please move to an open area or manually pin the exact school location on the map.`,
           });
         } else {
-          toast.success(`Location detected${typeof accuracy === "number" ? ` (±${Math.round(accuracy)}m)` : ""}`);
+          toast.success(
+            `Location detected${typeof accuracy === "number" ? ` (±${Math.round(accuracy)}m)` : ""}`,
+          );
         }
-      },
-      (err) => {
-        toast.dismiss(loading);
+        return;
+      }
+      if (err) {
         if (err.code === err.PERMISSION_DENIED) {
-          toast.error("Location permission denied", { description: "Please allow location access, or pin the location manually on the map." });
+          toast.error("Location permission denied", {
+            description: "Please allow location access in your browser, or pin the exact location manually on the map.",
+          });
         } else if (err.code === err.POSITION_UNAVAILABLE) {
-          toast.error("Location unavailable", { description: "Your device could not determine a location. Please pin it manually." });
+          toast.error("Location unavailable", {
+            description: "Your device could not determine a location. Please pin the exact location manually on the map.",
+          });
         } else if (err.code === err.TIMEOUT) {
-          toast.error("Location request timed out", { description: "Please try again or pin the location manually." });
+          toast.error("Location request timed out", {
+            description: "Please try again in an open area, or pin the exact location manually on the map.",
+          });
         } else {
           toast.error("Couldn't get location", { description: err.message });
         }
+      } else {
+        toast.error("Couldn't get an accurate location", {
+          description: "Please pin the exact location manually on the map.",
+        });
+      }
+    };
+
+    // Sample readings for up to ~10s; keep the one with the best (lowest) accuracy.
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (!best || (pos.coords.accuracy ?? Infinity) < (best.coords.accuracy ?? Infinity)) {
+          best = pos;
+        }
+        // If we already have a very good fix, stop early.
+        if (best && (best.coords.accuracy ?? Infinity) <= 15) finish();
+      },
+      (err) => {
+        // Only fail hard if we never got any reading.
+        if (!best) finish(err);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
+    // Stop sampling after ~10s regardless.
+    window.setTimeout(() => finish(), 10000);
   };
 
   return (

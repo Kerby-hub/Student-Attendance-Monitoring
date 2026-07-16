@@ -41,9 +41,9 @@ type Schedule = {
   semester: string; school_year: string;
   academic_year_id: string | null;
   semester_id: string | null;
-  subjects?: { code: string; name: string } | null;
+  subjects?: { code: string; name: string; department_id: string | null } | null;
   teachers?: { full_name: string } | null;
-  sections?: { name: string } | null;
+  sections?: { name: string; program: string | null; department_id?: string | null } | null;
   schedule_geofences?: { zone_id: string; geofence_zones: { name: string } | null }[];
 };
 
@@ -74,6 +74,8 @@ function SchedulesPage() {
   const [fSection, setFSection] = useState<string>("all");
   const [fSubject, setFSubject] = useState<string>("all");
   const [fTeacher, setFTeacher] = useState<string>("all");
+  const [fDept, setFDept] = useState<string>("all");
+  const [fProgram, setFProgram] = useState<string>("all");
 
   const { data: years = [] } = useAcademicYears();
   const { data: currentSemester } = useCurrentSemester();
@@ -84,7 +86,8 @@ function SchedulesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("class_schedules")
-        .select("*, subjects(code,name), teachers(full_name), sections(name), schedule_geofences(zone_id, geofence_zones(name))")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .select("*, subjects(code,name,department_id), teachers(full_name), sections(name,program,department_id), schedule_geofences(zone_id, geofence_zones(name))" as any)
         .order("school_year", { ascending: false })
         .order("day")
         .order("start_time");
@@ -109,6 +112,20 @@ function SchedulesPage() {
     queryKey: ["zones-for-schedule"],
     queryFn: async () => (await supabase.from("geofence_zones").select("id, name, radius_meters").eq("active", true).order("name")).data ?? [],
   });
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments-for-schedule"],
+    queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
+  });
+  // Distinct Program/Course values pulled from sections. Used both to populate
+  // the Program filter and to filter schedules whose section.program matches.
+  const programOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of data) {
+      const p = s.sections?.program?.trim();
+      if (p) set.add(p);
+    }
+    return Array.from(set).sort();
+  }, [data]);
 
   // Group schedule rows that share the same class + time + term + room so a
   // multi-day schedule shows as one row with all its days.
@@ -140,16 +157,25 @@ function SchedulesPage() {
       if (fSection !== "all" && s.section_id !== fSection) return false;
       if (fSubject !== "all" && s.subject_id !== fSubject) return false;
       if (fTeacher !== "all" && s.teacher_id !== fTeacher) return false;
+      if (fDept !== "all") {
+        const subjDept = s.subjects?.department_id ?? null;
+        const secDept = s.sections?.department_id ?? null;
+        if (subjDept !== fDept && secDept !== fDept) return false;
+      }
+      if (fProgram !== "all" && (s.sections?.program ?? "") !== fProgram) return false;
       if (!q) return true;
       const hay = [
         s.subjects?.code, s.subjects?.name, s.teachers?.full_name,
-        s.sections?.name, s.room, s.start_time, s.end_time,
+        s.sections?.name, s.sections?.program, s.room, s.start_time, s.end_time,
         g.days.join(","),
       ].filter(Boolean).join(" ").toLowerCase();
       return hay.includes(q);
     });
-  }, [groups, search, fSection, fSubject, fTeacher]);
-  const resetFilters = () => { setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all"); };
+  }, [groups, search, fSection, fSubject, fTeacher, fDept, fProgram]);
+  const resetFilters = () => {
+    setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all");
+    setFDept("all"); setFProgram("all");
+  };
 
   const upsert = useMutation({
     mutationFn: async () => {
@@ -446,7 +472,21 @@ function SchedulesPage() {
             {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
           </SelectContent>
         </Select>
-        {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all") && (
+        <Select value={fDept} onValueChange={setFDept}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fProgram} onValueChange={setFProgram}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all" || fDept !== "all" || fProgram !== "all") && (
           <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
         )}
       </div>

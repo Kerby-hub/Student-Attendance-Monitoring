@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   LayoutDashboard, CalendarClock, ClipboardCheck, FileBarChart, Bell,
-  Radio, BookMarked, Megaphone, BarChart3,
+  Radio, BookMarked, Megaphone, BarChart3, Calendar as CalendarIcon,
   GraduationCap as Logo,
 } from "lucide-react";
 import {
@@ -19,6 +19,7 @@ const groups: NavGroup[] = [
     label: "Classes", icon: BookMarked,
     items: [
       { title: "Schedules", url: "/teacher/schedules", icon: CalendarClock },
+      { title: "Calendar", url: "/teacher/calendar", icon: CalendarIcon },
     ],
   },
   {

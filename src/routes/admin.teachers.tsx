@@ -262,7 +262,7 @@ function TeachersPage() {
                 <div className="sm:col-span-2">
                   <Label>Department</Label>
                   <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
                       {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}

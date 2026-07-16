@@ -133,6 +133,24 @@ function SchedulesPage() {
     });
   }, [data]);
 
+  const filteredGroups = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return groups.filter((g) => {
+      const s = g.first;
+      if (fSection !== "all" && s.section_id !== fSection) return false;
+      if (fSubject !== "all" && s.subject_id !== fSubject) return false;
+      if (fTeacher !== "all" && s.teacher_id !== fTeacher) return false;
+      if (!q) return true;
+      const hay = [
+        s.subjects?.code, s.subjects?.name, s.teachers?.full_name,
+        s.sections?.name, s.room, s.start_time, s.end_time,
+        g.days.join(","),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [groups, search, fSection, fSubject, fTeacher]);
+  const resetFilters = () => { setSearch(""); setFSection("all"); setFSubject("all"); setFTeacher("all"); };
+
   const upsert = useMutation({
     mutationFn: async () => {
       if (!currentSemester && !editing) {

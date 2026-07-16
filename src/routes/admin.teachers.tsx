@@ -265,14 +265,14 @@ function TeachersPage() {
                   {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="sm:col-span-2">
-                  <Label>Department</Label>
-                  <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                  <Label>Department<span className="text-destructive"> *</span></Label>
+                  <Select value={form.department_id || undefined} onValueChange={(v) => { setForm({ ...form, department_id: v }); clearErr("department_id"); }}>
+                    <SelectTrigger aria-invalid={!!errors.department_id}><SelectValue placeholder="Select Department" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Department</SelectItem>
                       {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {errors.department_id && <p className="mt-1 text-xs text-destructive">{errors.department_id}</p>}
                 </div>
                 {!editing && (
                   <div className="sm:col-span-2">

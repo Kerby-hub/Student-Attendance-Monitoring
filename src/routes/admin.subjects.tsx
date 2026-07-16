@@ -108,7 +108,11 @@ function SubjectsPage() {
     if (!form.code.trim()) e.code = "Code is required.";
     if (!form.name.trim()) e.name = "Name is required.";
     if (!Number.isFinite(form.units) || form.units <= 0) e.units = "Units must be greater than 0.";
+    if (!form.department_id) e.department_id = "Please select a department.";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+    }
     return Object.keys(e).length === 0;
   }
 
@@ -208,14 +212,14 @@ function SubjectsPage() {
                   {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
                 </div>
                 <div className="sm:col-span-2">
-                  <Label>Department</Label>
-                  <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                  <Label>Department<span className="text-destructive"> *</span></Label>
+                  <Select value={form.department_id || undefined} onValueChange={(v) => { setForm({ ...form, department_id: v }); clearErr("department_id"); }}>
+                    <SelectTrigger aria-invalid={!!errors.department_id}><SelectValue placeholder="Select Department" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Department</SelectItem>
                       {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {errors.department_id && <p className="mt-1 text-xs text-destructive">{errors.department_id}</p>}
                 </div>
                 <div className="sm:col-span-2"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
               </div>

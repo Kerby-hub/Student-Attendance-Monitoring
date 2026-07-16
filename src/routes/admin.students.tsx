@@ -179,7 +179,11 @@ function StudentsPage() {
       e.guardian_email = "Invalid guardian email.";
     if (form.emergency_contact_phone.trim() && !normalizePhPhone(form.emergency_contact_phone))
       e.emergency_contact_phone = "Invalid PH mobile number.";
+    if (!form.section_id) e.section_id = "Please select a section.";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus(), 0);
+    }
     return Object.keys(e).length === 0;
   }
 
@@ -453,14 +457,14 @@ function StudentsPage() {
                   </Select>
                 </div>
                 <div className="sm:col-span-2">
-                  <Label>Section</Label>
-                  <Select value={form.section_id || "none"} onValueChange={(v) => setForm({ ...form, section_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select Section" /></SelectTrigger>
+                  <Label>Section<Req /></Label>
+                  <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
+                    <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Section</SelectItem>
                       {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <FieldError msg={errors.section_id} />
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Home address</Label>

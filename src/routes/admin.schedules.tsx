@@ -309,8 +309,9 @@ function SchedulesPage() {
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />New schedule</Button></DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col gap-0 p-0">
+              <DialogHeader className="border-b px-6 py-4"><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
+              <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="grid gap-3 sm:grid-cols-2">
 
                 <div className="sm:col-span-2">
@@ -417,10 +418,12 @@ function SchedulesPage() {
                   )}
                 </div>
               </div>
-              <DialogFooter>
+              </div>
+              <DialogFooter className="border-t bg-background px-6 py-3">
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
                 <Button
                   onClick={() => {
+                    if (upsert.isPending) return;
                     const errs: Record<string, string> = {};
                     if (!form.subject_id) errs.subject_id = "Subject is required.";
                     if (!form.teacher_id) errs.teacher_id = "Teacher is required.";
@@ -434,7 +437,7 @@ function SchedulesPage() {
                     if (!form.semester_id) errs.semester_id = "Semester is required.";
                     if (!form.days || form.days.length === 0) errs.days = "Please select at least one day.";
                     setErrors(errs);
-                    if (Object.keys(errs).length === 0 && !upsert.isPending) upsert.mutate();
+                    if (Object.keys(errs).length === 0) upsert.mutate();
                   }}
                   disabled={upsert.isPending}
                 >{upsert.isPending ? "Saving…" : editing ? "Save" : "Create"}</Button>

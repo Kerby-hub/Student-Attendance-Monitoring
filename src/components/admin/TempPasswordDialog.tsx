@@ -39,7 +39,11 @@ export function TempPasswordDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Account created</DialogTitle>
-          <DialogDescription>Share these credentials with the user securely.</DialogDescription>
+          <DialogDescription>
+            Please activate the account by logging in using the email address and temporary password below.{" "}
+            <a href="/login" className="text-primary underline underline-offset-2 hover:opacity-90">Click here</a>{" "}
+            to proceed to the Login page.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>

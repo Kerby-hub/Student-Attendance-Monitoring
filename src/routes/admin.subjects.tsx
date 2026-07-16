@@ -43,6 +43,7 @@ function SubjectsPage() {
   });
   const [search, setSearch] = useState("");
   const [fDept, setFDept] = useState<string>("all");
+  const [fProgram, setFProgram] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["subjects"],
@@ -62,10 +63,36 @@ function SubjectsPage() {
     },
   });
 
+  // Map subject_id → set of programs it is scheduled for, derived from
+  // class_schedules → sections.program. Enables filtering subjects by Program/Course.
+  const { data: subjectPrograms = { programs: [], map: new Map<string, Set<string>>() } } = useQuery({
+    queryKey: ["subject-programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("class_schedules").select("subject_id, sections(program)" as any);
+      if (error) throw error;
+      const map = new Map<string, Set<string>>();
+      const all = new Set<string>();
+      for (const row of (data ?? []) as unknown as { subject_id: string; sections: { program: string | null } | null }[]) {
+        const p = row.sections?.program?.trim();
+        if (!p) continue;
+        all.add(p);
+        const set = map.get(row.subject_id) ?? new Set<string>();
+        set.add(p);
+        map.set(row.subject_id, set);
+      }
+      return { programs: Array.from(all).sort(), map };
+    },
+  });
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return data.filter((s) => {
       if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
+      if (fProgram !== "all") {
+        const progs = subjectPrograms.map.get(s.id);
+        if (!progs || !progs.has(fProgram)) return false;
+      }
       if (!q) return true;
       return (
         s.code.toLowerCase().includes(q) ||
@@ -73,8 +100,8 @@ function SubjectsPage() {
         (s.description ?? "").toLowerCase().includes(q)
       );
     });
-  }, [data, search, fDept]);
-  const resetFilters = () => { setSearch(""); setFDept("all"); };
+  }, [data, search, fDept, fProgram, subjectPrograms]);
+  const resetFilters = () => { setSearch(""); setFDept("all"); setFProgram("all"); };
 
   function validate() {
     const e: Record<string, string> = {};

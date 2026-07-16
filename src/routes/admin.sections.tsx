@@ -26,6 +26,8 @@ export const Route = createFileRoute("/admin/sections")({
 type Section = {
   id: string; name: string; program: string | null;
   year_level: number | null; school_year: string;
+  department_id: string | null;
+  departments?: { name: string } | null;
 };
 
 function SectionsPage() {
@@ -36,17 +38,33 @@ function SectionsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: "", program: "", year_level: 1, school_year: "2025-2026",
+    department_id: "" as string,
   });
   const [search, setSearch] = useState("");
   const [fProgram, setFProgram] = useState<string>("all");
   const [fYear, setFYear] = useState<string>("all");
+  const [fDept, setFDept] = useState<string>("all");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["sections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sections").select("*").order("school_year", { ascending: false }).order("name");
+      const { data, error } = await supabase
+        .from("sections")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .select("*, departments(name)" as any)
+        .order("school_year", { ascending: false })
+        .order("name");
       if (error) throw error;
-      return data as Section[];
+      return (data ?? []) as unknown as Section[];
+    },
+  });
+
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("departments").select("id, name").order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
     },
   });
 
@@ -63,16 +81,18 @@ function SectionsPage() {
     return data.filter((s) => {
       if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
       if (fYear !== "all" && String(s.year_level ?? "") !== fYear) return false;
+      if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
         (s.program ?? "").toLowerCase().includes(q) ||
         String(s.year_level ?? "").includes(q) ||
-        s.school_year.toLowerCase().includes(q)
+        s.school_year.toLowerCase().includes(q) ||
+        (s.departments?.name ?? "").toLowerCase().includes(q)
       );
     });
-  }, [data, search, fProgram, fYear]);
-  const resetFilters = () => { setSearch(""); setFProgram("all"); setFYear("all"); };
+  }, [data, search, fProgram, fYear, fDept]);
+  const resetFilters = () => { setSearch(""); setFProgram("all"); setFYear("all"); setFDept("all"); };
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -91,12 +111,15 @@ function SectionsPage() {
         program: form.program.trim() || null,
         year_level: form.year_level || null,
         school_year: form.school_year.trim(),
+        department_id: form.department_id || null,
       };
       if (editing) {
-        const { error } = await supabase.from("sections").update(payload).eq("id", editing.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await supabase.from("sections").update(payload as any).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("sections").insert(payload);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await supabase.from("sections").insert(payload as any);
         if (error) throw error;
       }
     },
@@ -104,7 +127,7 @@ function SectionsPage() {
       toast.success(editing ? "Section updated" : "Section created");
       qc.invalidateQueries({ queryKey: ["sections"] });
       setOpen(false); setEditing(null); setErrors({});
-      setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" });
+      setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026", department_id: "" });
     },
     onError: (e: Error) => {
       if (e.message !== "Please fix the highlighted fields.") toast.error(e.message);
@@ -124,10 +147,17 @@ function SectionsPage() {
     },
   });
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026" }); setOpen(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ name: "", program: "", year_level: 1, school_year: "2025-2026", department_id: "" });
+    setOpen(true);
+  };
   const openEdit = (s: Section) => {
     setEditing(s);
-    setForm({ name: s.name, program: s.program ?? "", year_level: s.year_level ?? 1, school_year: s.school_year });
+    setForm({
+      name: s.name, program: s.program ?? "", year_level: s.year_level ?? 1,
+      school_year: s.school_year, department_id: s.department_id ?? "",
+    });
     setOpen(true);
   };
 
@@ -157,6 +187,16 @@ function SectionsPage() {
                   {errors.year_level && <p className="mt-1 text-xs text-destructive">{errors.year_level}</p>}
                 </div>
                 <div className="sm:col-span-2">
+                  <Label>Department</Label>
+                  <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Department</SelectItem>
+                      {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-2">
                   <Label>School year<span className="text-destructive"> *</span></Label>
                   <Input value={form.school_year} aria-invalid={!!errors.school_year}
                     onChange={(e) => { setForm({ ...form, school_year: e.target.value }); if (errors.school_year) setErrors((er) => { const n = { ...er }; delete n.school_year; return n; }); }}
@@ -179,6 +219,13 @@ function SectionsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <Select value={fDept} onValueChange={setFDept}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={fProgram} onValueChange={setFProgram}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
           <SelectContent>
@@ -193,7 +240,7 @@ function SectionsPage() {
             {yearOptions.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
-        {(search || fProgram !== "all" || fYear !== "all") && (
+        {(search || fProgram !== "all" || fYear !== "all" || fDept !== "all") && (
           <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
         )}
       </div>
@@ -201,21 +248,23 @@ function SectionsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Section</TableHead><TableHead>Program</TableHead>
+              <TableHead>Section</TableHead><TableHead>Department</TableHead>
+              <TableHead>Program</TableHead>
               <TableHead>Year</TableHead><TableHead>School year</TableHead>
               <TableHead className="w-32"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+              <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                 {data.length === 0 ? "No sections yet." : "No sections match your search or filters."}
               </TableCell></TableRow>
             ) : filtered.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.name}</TableCell>
+                <TableCell>{s.departments?.name ?? "—"}</TableCell>
                 <TableCell>{s.program ?? "—"}</TableCell>
                 <TableCell>{s.year_level ?? "—"}</TableCell>
                 <TableCell>{s.school_year}</TableCell>

@@ -418,6 +418,38 @@ function SchedulesPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search schedules..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fSection} onValueChange={setFSection}>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Sections" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sections</SelectItem>
+            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fSubject} onValueChange={setFSubject}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Subjects" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Subjects</SelectItem>
+            {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fTeacher} onValueChange={setFTeacher}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Teachers" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Teachers</SelectItem>
+            {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -432,9 +464,11 @@ function SchedulesPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules yet.</TableCell></TableRow>
-            ) : groups.map((g) => {
+            ) : filteredGroups.length === 0 ? (
+              <TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No schedules yet." : "No schedules match your search or filters."}
+              </TableCell></TableRow>
+            ) : filteredGroups.map((g) => {
               const s = g.first;
               const label = `${s.subjects?.code ?? ""} · ${s.sections?.name ?? ""}`;
               return (

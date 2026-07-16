@@ -62,6 +62,20 @@ function SubjectsPage() {
     },
   });
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data.filter((s) => {
+      if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
+      if (!q) return true;
+      return (
+        s.code.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        (s.description ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, search, fDept]);
+  const resetFilters = () => { setSearch(""); setFDept("all"); };
+
   function validate() {
     const e: Record<string, string> = {};
     if (!form.code.trim()) e.code = "Code is required.";

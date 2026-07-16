@@ -172,6 +172,31 @@ function SectionsPage() {
           </Dialog>
         }
       />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Input
+          placeholder="Search sections..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Select value={fProgram} onValueChange={setFProgram}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fYear} onValueChange={setFYear}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Year Levels" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Year Levels</SelectItem>
+            {yearOptions.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {(search || fProgram !== "all" || fYear !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}><X className="mr-1 h-4 w-4" />Reset filters</Button>
+        )}
+      </div>
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -184,9 +209,11 @@ function SectionsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading…</TableCell></TableRow>
-            ) : data.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No sections yet.</TableCell></TableRow>
-            ) : data.map((s) => (
+            ) : filtered.length === 0 ? (
+              <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                {data.length === 0 ? "No sections yet." : "No sections match your search or filters."}
+              </TableCell></TableRow>
+            ) : filtered.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.name}</TableCell>
                 <TableCell>{s.program ?? "—"}</TableCell>

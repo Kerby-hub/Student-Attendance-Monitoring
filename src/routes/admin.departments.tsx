@@ -147,11 +147,6 @@ function DepartmentsPage() {
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow><TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead className="w-32"></TableHead></TableRow>
-          </TableHeader>
       <div className="mb-3">
         <Input
           value={search}

@@ -106,8 +106,12 @@ function SchedulesPage() {
   });
   const { data: sections = [] } = useQuery({
     queryKey: ["sections-for-schedule"],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queryFn: async () => (await supabase.from("sections").select("id, name, school_year, program, year_level, department_id" as any).order("name")).data ?? [],
+    queryFn: async () => {
+      const { data } = await supabase.from("sections")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .select("id, name, school_year, program, year_level, department_id" as any).order("name");
+      return (data ?? []) as unknown as { id: string; name: string; school_year: string; program: string | null; year_level: number | null; department_id: string | null }[];
+    },
   });
   const { data: zones = [] } = useQuery({
     queryKey: ["zones-for-schedule"],

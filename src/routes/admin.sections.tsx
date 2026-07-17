@@ -233,14 +233,14 @@ function SectionsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={fDept} onValueChange={setFDept}>
+        <Select value={fDept} onValueChange={changeDept}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
             {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fProgram} onValueChange={setFProgram}>
+        <Select value={fProgram} onValueChange={changeProgram}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Programs/Courses</SelectItem>

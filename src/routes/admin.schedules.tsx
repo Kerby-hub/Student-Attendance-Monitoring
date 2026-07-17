@@ -206,7 +206,8 @@ function SchedulesPage() {
         throw new Error("Please set an active Academic Year and Semester first.");
       }
       const days = form.days.length > 0 ? form.days : [form.day];
-      const { days: _drop, ...base } = form;
+      // Strip cascade helpers — they are UI-only and not columns on class_schedules.
+      const { days: _drop, form_department_id: _d, form_program: _p, form_year_level: _y, ...base } = form;
       const payloadBase = { ...base, room: form.room || null };
       const affectedIds: string[] = [];
 
@@ -294,6 +295,7 @@ function SchedulesPage() {
     const s = rows[0];
     setEditing(s);
     setEditingGroupIds(rows.map((r) => r.id));
+    const sec = sections.find((x) => x.id === s.section_id);
     setForm({
       subject_id: s.subject_id, teacher_id: s.teacher_id, section_id: s.section_id,
       room: s.room ?? "", day: s.day,
@@ -302,6 +304,9 @@ function SchedulesPage() {
       semester: s.semester, school_year: s.school_year,
       academic_year_id: s.academic_year_id ?? "",
       semester_id: s.semester_id ?? "",
+      form_department_id: sec?.department_id ?? s.subjects?.department_id ?? "",
+      form_program: sec?.program ?? "",
+      form_year_level: sec?.year_level != null ? String(sec.year_level) : "",
     });
     // Zones are stored per row; take the union across the group so the edit
     // form reflects everything the group currently has assigned.

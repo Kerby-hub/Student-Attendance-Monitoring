@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, MapPin, Clock, Users, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentSemester, useCurrentAcademicYear } from "@/lib/academic/hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,14 +80,21 @@ function StudentCalendarPage() {
     },
   });
 
+  const { data: currentSemester } = useCurrentSemester();
+  const { data: currentYear } = useCurrentAcademicYear();
+
   const { data: schedules = [] } = useQuery({
-    queryKey: ["cal-schedules", student?.section_id],
+    queryKey: ["cal-schedules", student?.section_id, currentSemester?.id, currentYear?.id],
     enabled: !!student?.section_id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("class_schedules")
-        .select("id, day, start_time, end_time, room, subjects(code,name), teachers(full_name)")
+        .select("id, day, start_time, end_time, room, semester_id, academic_year_id, subjects(code,name), teachers(full_name)")
         .eq("section_id", student!.section_id!);
+      // Restrict to the active academic year & semester when available.
+      if (currentSemester?.id) q = q.eq("semester_id", currentSemester.id);
+      else if (currentYear?.id) q = q.eq("academic_year_id", currentYear.id);
+      const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },

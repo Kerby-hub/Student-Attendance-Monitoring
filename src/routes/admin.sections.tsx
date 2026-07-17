@@ -187,13 +187,40 @@ function SectionsPage() {
               <DialogHeader><DialogTitle>{editing ? "Edit section" : "New section"}</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <Label>Section name<span className="text-destructive"> *</span></Label>
-                  <Input value={form.name} aria-invalid={!!errors.name}
-                    onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors((er) => { const n = { ...er }; delete n.name; return n; }); }}
-                    placeholder="BSCS 1-A" />
-                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+                  <Label>Department</Label>
+                  <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v, program: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Department</SelectItem>
+                      {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div><Label>Program</Label><Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} placeholder="BSCS" /></div>
+                <div>
+                  <Label>Program/Course</Label>
+                  {(() => {
+                    const opts = Array.from(new Set(
+                      data
+                        .filter((s) => !form.department_id || (s.department_id ?? "") === form.department_id)
+                        .map((s) => s.program)
+                        .filter((p): p is string => !!p),
+                    )).sort();
+                    const listId = `sections-form-programs-${form.department_id || "any"}`;
+                    return (
+                      <>
+                        <Input
+                          value={form.program}
+                          list={listId}
+                          onChange={(e) => setForm({ ...form, program: e.target.value })}
+                          placeholder="BSCS"
+                        />
+                        <datalist id={listId}>
+                          {opts.map((p) => <option key={p} value={p} />)}
+                        </datalist>
+                      </>
+                    );
+                  })()}
+                </div>
                 <div>
                   <Label>Year level<span className="text-destructive"> *</span></Label>
                   <Input type="number" min={1} max={10} value={form.year_level} aria-invalid={!!errors.year_level}
@@ -201,14 +228,11 @@ function SectionsPage() {
                   {errors.year_level && <p className="mt-1 text-xs text-destructive">{errors.year_level}</p>}
                 </div>
                 <div className="sm:col-span-2">
-                  <Label>Department</Label>
-                  <Select value={form.department_id || "none"} onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Department</SelectItem>
-                      {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Section name<span className="text-destructive"> *</span></Label>
+                  <Input value={form.name} aria-invalid={!!errors.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors((er) => { const n = { ...er }; delete n.name; return n; }); }}
+                    placeholder="BSCS 1-A" />
+                  {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
                 </div>
                 <div className="sm:col-span-2">
                   <Label>School year<span className="text-destructive"> *</span></Label>

@@ -251,7 +251,7 @@ function AdminCalendarPage() {
               <DialogHeader>
                 <DialogTitle>{viewing.title}</DialogTitle>
                 <DialogDescription className="flex flex-wrap gap-2 pt-1">
-                  <Badge variant="outline" className="capitalize">{viewing.audience}</Badge>
+                  <Badge variant="outline" className="capitalize">Audience: {viewing.audience}</Badge>
                   {viewing.event_type && <Badge variant="secondary">{viewing.event_type}</Badge>}
                 </DialogDescription>
               </DialogHeader>
@@ -337,7 +337,7 @@ function AdminCalendarPage() {
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {ev.event_type && <Badge variant="secondary" className="text-[10px]">{ev.event_type}</Badge>}
-                  <Badge variant="outline" className="text-[10px] capitalize">{ev.audience}</Badge>
+                  <Badge variant="outline" className="text-[10px] capitalize">Audience: {ev.audience}</Badge>
                 </div>
               </button>
             ))}

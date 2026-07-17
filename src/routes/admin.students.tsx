@@ -518,13 +518,26 @@ function StudentsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Section<Req /></Label>
-                  <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
-                    <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
-                    <SelectContent>
-                      {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FieldError msg={errors.section_id} />
+                  {(() => {
+                    const opts = sections.filter((s) => {
+                      if (form.program && s.program && s.program !== form.program) return false;
+                      if (form.year_level && s.year_level != null && String(s.year_level) !== form.year_level) return false;
+                      return true;
+                    });
+                    return (
+                      <>
+                        <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
+                          <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
+                          <SelectContent>
+                            {opts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match the selected program/year.</div>
+                            ) : opts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FieldError msg={errors.section_id} />
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Home address</Label>

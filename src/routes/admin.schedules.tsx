@@ -473,18 +473,32 @@ function SchedulesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <Select value={fDept} onValueChange={(v) => { setFDept(v); setFProgram("all"); setFSection("all"); setFSubject("all"); }}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fProgram} onValueChange={(v) => { setFProgram(v); setFSection("all"); }}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={fSection} onValueChange={setFSection}>
           <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Sections" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sections</SelectItem>
-            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fSubject} onValueChange={setFSubject}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Subjects" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Subjects</SelectItem>
-            {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+            {subjectOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fTeacher} onValueChange={setFTeacher}>
@@ -492,20 +506,6 @@ function SchedulesPage() {
           <SelectContent>
             <SelectItem value="all">All Teachers</SelectItem>
             {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={fDept} onValueChange={setFDept}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={fProgram} onValueChange={setFProgram}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Programs/Courses</SelectItem>
-            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all" || fDept !== "all" || fProgram !== "all") && (

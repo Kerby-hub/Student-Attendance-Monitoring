@@ -133,24 +133,66 @@ function StudentsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sections")
-        .select("id, name, program, year_level")
+        .select("id, name, program, year_level, department_id")
         .order("name");
       if (error) throw error;
       return data as Section[];
     },
   });
 
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data as { id: string; name: string }[] ?? [],
+  });
+
+  // Dependent option lists: Department → Program → Year → Section
   const programs = useMemo(() => {
     const set = new Set<string>();
-    students.forEach((s) => s.program && set.add(s.program));
-    sections.forEach((s) => s.program && set.add(s.program));
+    sections.forEach((s) => {
+      if (!s.program) return;
+      if (filterDept !== "all" && s.department_id !== filterDept) return;
+      set.add(s.program);
+    });
+    // include programs referenced by existing students matching the dept filter
+    students.forEach((s) => {
+      if (!s.program) return;
+      if (filterDept !== "all") {
+        const sec = sections.find((x) => x.id === s.section_id);
+        if (!sec || sec.department_id !== filterDept) return;
+      }
+      set.add(s.program);
+    });
     return Array.from(set).sort();
-  }, [students, sections]);
+  }, [students, sections, filterDept]);
+
+  const yearOptions = useMemo(() => {
+    const set = new Set<number>();
+    sections.forEach((s) => {
+      if (s.year_level == null) return;
+      if (filterDept !== "all" && s.department_id !== filterDept) return;
+      if (filterProgram !== "all" && s.program !== filterProgram) return;
+      set.add(s.year_level);
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [sections, filterDept, filterProgram]);
+
+  const sectionOptions = useMemo(() => {
+    return sections.filter((s) => {
+      if (filterDept !== "all" && s.department_id !== filterDept) return false;
+      if (filterProgram !== "all" && s.program !== filterProgram) return false;
+      if (filterYear !== "all" && String(s.year_level ?? "") !== filterYear) return false;
+      return true;
+    });
+  }, [sections, filterDept, filterProgram, filterYear]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
       if (filterStatus !== "all" && s.status !== filterStatus) return false;
+      if (filterDept !== "all") {
+        const sec = sections.find((x) => x.id === s.section_id);
+        if (!sec || sec.department_id !== filterDept) return false;
+      }
       if (filterProgram !== "all" && s.program !== filterProgram) return false;
       if (filterYear !== "all" && String(s.year_level) !== filterYear) return false;
       if (filterSection !== "all" && s.section_id !== filterSection) return false;
@@ -161,7 +203,24 @@ function StudentsPage() {
         (s.email ?? "").toLowerCase().includes(q)
       );
     });
-  }, [students, search, filterProgram, filterYear, filterSection, filterStatus]);
+  }, [students, sections, search, filterDept, filterProgram, filterYear, filterSection, filterStatus]);
+
+  // Reset invalid child selections when parent filter changes
+  const changeDept = (v: string) => {
+    setFilterDept(v);
+    setFilterProgram("all"); setFilterYear("all"); setFilterSection("all");
+  };
+  const changeProgram = (v: string) => {
+    setFilterProgram(v); setFilterYear("all"); setFilterSection("all");
+  };
+  const changeYear = (v: string) => {
+    setFilterYear(v); setFilterSection("all");
+  };
+  const resetFilters = () => {
+    setSearch(""); setFilterDept("all"); setFilterProgram("all");
+    setFilterYear("all"); setFilterSection("all");
+  };
+
 
   function validate(): boolean {
     const e: Record<string, string> = {};

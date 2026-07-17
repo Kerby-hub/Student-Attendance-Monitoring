@@ -98,15 +98,16 @@ function SchedulesPage() {
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects-for-schedule"],
-    queryFn: async () => (await supabase.from("subjects").select("id, code, name").eq("archived", false).order("code")).data ?? [],
+    queryFn: async () => (await supabase.from("subjects").select("id, code, name, department_id").eq("archived", false).order("code")).data ?? [],
   });
   const { data: teachers = [] } = useQuery({
     queryKey: ["teachers-for-schedule"],
-    queryFn: async () => (await supabase.from("teachers").select("id, full_name").eq("status", "active").order("full_name")).data ?? [],
+    queryFn: async () => (await supabase.from("teachers").select("id, full_name, department_id").eq("status", "active").order("full_name")).data ?? [],
   });
   const { data: sections = [] } = useQuery({
     queryKey: ["sections-for-schedule"],
-    queryFn: async () => (await supabase.from("sections").select("id, name, school_year").order("name")).data ?? [],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    queryFn: async () => (await supabase.from("sections").select("id, name, school_year, program, year_level, department_id" as any).order("name")).data ?? [],
   });
   const { data: zones = [] } = useQuery({
     queryKey: ["zones-for-schedule"],

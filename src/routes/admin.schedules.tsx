@@ -98,15 +98,20 @@ function SchedulesPage() {
 
   const { data: subjects = [] } = useQuery({
     queryKey: ["subjects-for-schedule"],
-    queryFn: async () => (await supabase.from("subjects").select("id, code, name").eq("archived", false).order("code")).data ?? [],
+    queryFn: async () => (await supabase.from("subjects").select("id, code, name, department_id").eq("archived", false).order("code")).data ?? [],
   });
   const { data: teachers = [] } = useQuery({
     queryKey: ["teachers-for-schedule"],
-    queryFn: async () => (await supabase.from("teachers").select("id, full_name").eq("status", "active").order("full_name")).data ?? [],
+    queryFn: async () => (await supabase.from("teachers").select("id, full_name, department_id").eq("status", "active").order("full_name")).data ?? [],
   });
   const { data: sections = [] } = useQuery({
     queryKey: ["sections-for-schedule"],
-    queryFn: async () => (await supabase.from("sections").select("id, name, school_year").order("name")).data ?? [],
+    queryFn: async () => {
+      const { data } = await supabase.from("sections")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .select("id, name, school_year, program, year_level, department_id" as any).order("name");
+      return (data ?? []) as unknown as { id: string; name: string; school_year: string; program: string | null; year_level: number | null; department_id: string | null }[];
+    },
   });
   const { data: zones = [] } = useQuery({
     queryKey: ["zones-for-schedule"],
@@ -116,16 +121,30 @@ function SchedulesPage() {
     queryKey: ["departments-for-schedule"],
     queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
   });
-  // Distinct Program/Course values pulled from sections. Used both to populate
-  // the Program filter and to filter schedules whose section.program matches.
+  // Dependent options — Department → Program → Section → Subject
   const programOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const s of data) {
-      const p = s.sections?.program?.trim();
-      if (p) set.add(p);
+    for (const s of sections) {
+      if (fDept !== "all" && s.department_id !== fDept) continue;
+      if (s.program?.trim()) set.add(s.program.trim());
     }
     return Array.from(set).sort();
-  }, [data]);
+  }, [sections, fDept]);
+
+  const sectionOptions = useMemo(() => {
+    return sections.filter((s) => {
+      if (fDept !== "all" && s.department_id !== fDept) return false;
+      if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
+      return true;
+    });
+  }, [sections, fDept, fProgram]);
+
+  const subjectOptions = useMemo(() => {
+    return subjects.filter((sub: { id: string; code: string; name: string; department_id?: string | null }) => {
+      if (fDept !== "all" && (sub.department_id ?? null) !== fDept) return false;
+      return true;
+    });
+  }, [subjects, fDept]);
 
   // Group schedule rows that share the same class + time + term + room so a
   // multi-day schedule shows as one row with all its days.
@@ -454,18 +473,32 @@ function SchedulesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <Select value={fDept} onValueChange={(v) => { setFDept(v); setFProgram("all"); setFSection("all"); setFSubject("all"); }}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={fProgram} onValueChange={(v) => { setFProgram(v); setFSection("all"); }}>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
+            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={fSection} onValueChange={setFSection}>
           <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Sections" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sections</SelectItem>
-            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fSubject} onValueChange={setFSubject}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Subjects" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Subjects</SelectItem>
-            {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+            {subjectOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fTeacher} onValueChange={setFTeacher}>
@@ -473,20 +506,6 @@ function SchedulesPage() {
           <SelectContent>
             <SelectItem value="all">All Teachers</SelectItem>
             {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={fDept} onValueChange={setFDept}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={fProgram} onValueChange={setFProgram}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Programs/Courses</SelectItem>
-            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all" || fDept !== "all" || fProgram !== "all") && (

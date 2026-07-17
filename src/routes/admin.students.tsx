@@ -58,7 +58,7 @@ type Student = {
   sections?: { name: string } | null;
 };
 
-type Section = { id: string; name: string; program: string | null; year_level: number | null };
+type Section = { id: string; name: string; program: string | null; year_level: number | null; department_id: string | null };
 
 const STATUS_VARIANTS: Record<Student["status"], "default" | "secondary" | "destructive" | "outline"> = {
   active: "default", inactive: "secondary", graduated: "outline", archived: "destructive",
@@ -92,6 +92,7 @@ function StudentsPage() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Student | null>(null);
   const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
   const [filterProgram, setFilterProgram] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
   const [filterSection, setFilterSection] = useState("all");
@@ -132,24 +133,66 @@ function StudentsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sections")
-        .select("id, name, program, year_level")
+        .select("id, name, program, year_level, department_id")
         .order("name");
       if (error) throw error;
       return data as Section[];
     },
   });
 
+  const { data: depts = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data as { id: string; name: string }[] ?? [],
+  });
+
+  // Dependent option lists: Department → Program → Year → Section
   const programs = useMemo(() => {
     const set = new Set<string>();
-    students.forEach((s) => s.program && set.add(s.program));
-    sections.forEach((s) => s.program && set.add(s.program));
+    sections.forEach((s) => {
+      if (!s.program) return;
+      if (filterDept !== "all" && s.department_id !== filterDept) return;
+      set.add(s.program);
+    });
+    // include programs referenced by existing students matching the dept filter
+    students.forEach((s) => {
+      if (!s.program) return;
+      if (filterDept !== "all") {
+        const sec = sections.find((x) => x.id === s.section_id);
+        if (!sec || sec.department_id !== filterDept) return;
+      }
+      set.add(s.program);
+    });
     return Array.from(set).sort();
-  }, [students, sections]);
+  }, [students, sections, filterDept]);
+
+  const yearOptions = useMemo(() => {
+    const set = new Set<number>();
+    sections.forEach((s) => {
+      if (s.year_level == null) return;
+      if (filterDept !== "all" && s.department_id !== filterDept) return;
+      if (filterProgram !== "all" && s.program !== filterProgram) return;
+      set.add(s.year_level);
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [sections, filterDept, filterProgram]);
+
+  const sectionOptions = useMemo(() => {
+    return sections.filter((s) => {
+      if (filterDept !== "all" && s.department_id !== filterDept) return false;
+      if (filterProgram !== "all" && s.program !== filterProgram) return false;
+      if (filterYear !== "all" && String(s.year_level ?? "") !== filterYear) return false;
+      return true;
+    });
+  }, [sections, filterDept, filterProgram, filterYear]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return students.filter((s) => {
       if (filterStatus !== "all" && s.status !== filterStatus) return false;
+      if (filterDept !== "all") {
+        const sec = sections.find((x) => x.id === s.section_id);
+        if (!sec || sec.department_id !== filterDept) return false;
+      }
       if (filterProgram !== "all" && s.program !== filterProgram) return false;
       if (filterYear !== "all" && String(s.year_level) !== filterYear) return false;
       if (filterSection !== "all" && s.section_id !== filterSection) return false;
@@ -160,7 +203,24 @@ function StudentsPage() {
         (s.email ?? "").toLowerCase().includes(q)
       );
     });
-  }, [students, search, filterProgram, filterYear, filterSection, filterStatus]);
+  }, [students, sections, search, filterDept, filterProgram, filterYear, filterSection, filterStatus]);
+
+  // Reset invalid child selections when parent filter changes
+  const changeDept = (v: string) => {
+    setFilterDept(v);
+    setFilterProgram("all"); setFilterYear("all"); setFilterSection("all");
+  };
+  const changeProgram = (v: string) => {
+    setFilterProgram(v); setFilterYear("all"); setFilterSection("all");
+  };
+  const changeYear = (v: string) => {
+    setFilterYear(v); setFilterSection("all");
+  };
+  const resetFilters = () => {
+    setSearch(""); setFilterDept("all"); setFilterProgram("all");
+    setFilterYear("all"); setFilterSection("all");
+  };
+
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -458,13 +518,26 @@ function StudentsPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Section<Req /></Label>
-                  <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
-                    <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
-                    <SelectContent>
-                      {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FieldError msg={errors.section_id} />
+                  {(() => {
+                    const opts = sections.filter((s) => {
+                      if (form.program && s.program && s.program !== form.program) return false;
+                      if (form.year_level && s.year_level != null && String(s.year_level) !== form.year_level) return false;
+                      return true;
+                    });
+                    return (
+                      <>
+                        <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
+                          <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
+                          <SelectContent>
+                            {opts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match the selected program/year.</div>
+                            ) : opts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FieldError msg={errors.section_id} />
+                      </>
+                    );
+                  })()}
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Home address</Label>
@@ -568,8 +641,8 @@ function StudentsPage() {
       />
 
 
-      {/* Filters */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Filters — Department → Program → Year → Section */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <div className="relative lg:col-span-2">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -577,25 +650,32 @@ function StudentsPage() {
             placeholder="Search name, ID, email…" className="pl-8"
           />
         </div>
-        <Select value={filterProgram} onValueChange={setFilterProgram}>
-          <SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger>
+        <Select value={filterDept} onValueChange={changeDept}>
+          <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All programs</SelectItem>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterProgram} onValueChange={changeProgram}>
+          <SelectTrigger><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
             {programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterYear} onValueChange={setFilterYear}>
-          <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
+        <Select value={filterYear} onValueChange={changeYear}>
+          <SelectTrigger><SelectValue placeholder="All Year Levels" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All years</SelectItem>
-            {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+            <SelectItem value="all">All Year Levels</SelectItem>
+            {(yearOptions.length > 0 ? yearOptions : [1, 2, 3, 4, 5]).map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSection} onValueChange={setFilterSection}>
-          <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="All Sections" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All sections</SelectItem>
-            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            <SelectItem value="all">All Sections</SelectItem>
+            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -608,7 +688,11 @@ function StudentsPage() {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        {(search || filterDept !== "all" || filterProgram !== "all" || filterYear !== "all" || filterSection !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters} className="lg:col-span-1">Reset filters</Button>
+        )}
       </div>
+
 
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>

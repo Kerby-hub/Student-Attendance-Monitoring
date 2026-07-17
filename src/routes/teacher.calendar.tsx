@@ -206,7 +206,7 @@ function TeacherCalendarPage() {
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {ev.event_type && <Badge variant="secondary" className="text-[10px]">{ev.event_type}</Badge>}
-                      <Badge variant="outline" className="text-[10px] capitalize">{ev.audience}</Badge>
+                      <Badge variant="outline" className="text-[10px] capitalize">Audience: {ev.audience}</Badge>
                     </div>
                   </div>
                 </div>
@@ -285,7 +285,7 @@ function TeacherCalendarPage() {
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {ev.event_type && <Badge variant="secondary" className="text-[10px]">{ev.event_type}</Badge>}
-                      <Badge variant="outline" className="text-[10px] capitalize">{ev.audience}</Badge>
+                      <Badge variant="outline" className="text-[10px] capitalize">Audience: {ev.audience}</Badge>
                     </div>
                   </div>
                 </div>

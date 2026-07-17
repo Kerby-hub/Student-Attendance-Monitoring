@@ -121,16 +121,30 @@ function SchedulesPage() {
     queryKey: ["departments-for-schedule"],
     queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
   });
-  // Distinct Program/Course values pulled from sections. Used both to populate
-  // the Program filter and to filter schedules whose section.program matches.
+  // Dependent options — Department → Program → Section → Subject
   const programOptions = useMemo(() => {
     const set = new Set<string>();
-    for (const s of data) {
-      const p = s.sections?.program?.trim();
-      if (p) set.add(p);
+    for (const s of sections) {
+      if (fDept !== "all" && s.department_id !== fDept) continue;
+      if (s.program?.trim()) set.add(s.program.trim());
     }
     return Array.from(set).sort();
-  }, [data]);
+  }, [sections, fDept]);
+
+  const sectionOptions = useMemo(() => {
+    return sections.filter((s) => {
+      if (fDept !== "all" && s.department_id !== fDept) return false;
+      if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
+      return true;
+    });
+  }, [sections, fDept, fProgram]);
+
+  const subjectOptions = useMemo(() => {
+    return subjects.filter((sub: { id: string; code: string; name: string; department_id?: string | null }) => {
+      if (fDept !== "all" && (sub.department_id ?? null) !== fDept) return false;
+      return true;
+    });
+  }, [subjects, fDept]);
 
   // Group schedule rows that share the same class + time + term + room so a
   // multi-day schedule shows as one row with all its days.

@@ -68,20 +68,32 @@ function SectionsPage() {
     },
   });
 
+  // Dependent options: Department → Program → Year
   const programOptions = useMemo(
-    () => Array.from(new Set(data.map((s) => s.program).filter((p): p is string => !!p))).sort(),
-    [data],
+    () => Array.from(new Set(
+      data
+        .filter((s) => fDept === "all" || (s.department_id ?? "") === fDept)
+        .map((s) => s.program)
+        .filter((p): p is string => !!p),
+    )).sort(),
+    [data, fDept],
   );
   const yearOptions = useMemo(
-    () => Array.from(new Set(data.map((s) => s.year_level).filter((y): y is number => y != null))).sort((a, b) => a - b),
-    [data],
+    () => Array.from(new Set(
+      data
+        .filter((s) => fDept === "all" || (s.department_id ?? "") === fDept)
+        .filter((s) => fProgram === "all" || (s.program ?? "") === fProgram)
+        .map((s) => s.year_level)
+        .filter((y): y is number => y != null),
+    )).sort((a, b) => a - b),
+    [data, fDept, fProgram],
   );
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return data.filter((s) => {
+      if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
       if (fProgram !== "all" && (s.program ?? "") !== fProgram) return false;
       if (fYear !== "all" && String(s.year_level ?? "") !== fYear) return false;
-      if (fDept !== "all" && (s.department_id ?? "") !== fDept) return false;
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
@@ -92,6 +104,8 @@ function SectionsPage() {
       );
     });
   }, [data, search, fProgram, fYear, fDept]);
+  const changeDept = (v: string) => { setFDept(v); setFProgram("all"); setFYear("all"); };
+  const changeProgram = (v: string) => { setFProgram(v); setFYear("all"); };
   const resetFilters = () => { setSearch(""); setFProgram("all"); setFYear("all"); setFDept("all"); };
 
   function validate(): boolean {

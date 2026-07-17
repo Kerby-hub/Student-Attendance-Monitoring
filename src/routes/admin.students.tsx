@@ -628,8 +628,8 @@ function StudentsPage() {
       />
 
 
-      {/* Filters */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Filters — Department → Program → Year → Section */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <div className="relative lg:col-span-2">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -637,25 +637,32 @@ function StudentsPage() {
             placeholder="Search name, ID, email…" className="pl-8"
           />
         </div>
-        <Select value={filterProgram} onValueChange={setFilterProgram}>
-          <SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger>
+        <Select value={filterDept} onValueChange={changeDept}>
+          <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All programs</SelectItem>
+            <SelectItem value="all">All Departments</SelectItem>
+            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterProgram} onValueChange={changeProgram}>
+          <SelectTrigger><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Programs/Courses</SelectItem>
             {programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterYear} onValueChange={setFilterYear}>
-          <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
+        <Select value={filterYear} onValueChange={changeYear}>
+          <SelectTrigger><SelectValue placeholder="All Year Levels" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All years</SelectItem>
-            {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+            <SelectItem value="all">All Year Levels</SelectItem>
+            {(yearOptions.length > 0 ? yearOptions : [1, 2, 3, 4, 5]).map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSection} onValueChange={setFilterSection}>
-          <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="All Sections" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All sections</SelectItem>
-            {sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            <SelectItem value="all">All Sections</SelectItem>
+            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -668,7 +675,11 @@ function StudentsPage() {
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        {(search || filterDept !== "all" || filterProgram !== "all" || filterYear !== "all" || filterSection !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters} className="lg:col-span-1">Reset filters</Button>
+        )}
       </div>
+
 
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>

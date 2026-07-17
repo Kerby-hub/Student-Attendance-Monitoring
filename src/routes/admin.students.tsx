@@ -58,7 +58,7 @@ type Student = {
   sections?: { name: string } | null;
 };
 
-type Section = { id: string; name: string; program: string | null; year_level: number | null };
+type Section = { id: string; name: string; program: string | null; year_level: number | null; department_id: string | null };
 
 const STATUS_VARIANTS: Record<Student["status"], "default" | "secondary" | "destructive" | "outline"> = {
   active: "default", inactive: "secondary", graduated: "outline", archived: "destructive",
@@ -92,6 +92,7 @@ function StudentsPage() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Student | null>(null);
   const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("all");
   const [filterProgram, setFilterProgram] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
   const [filterSection, setFilterSection] = useState("all");

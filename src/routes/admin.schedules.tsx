@@ -55,6 +55,10 @@ const empty = {
   semester: "1st", school_year: "2025-2026",
   academic_year_id: "" as string,
   semester_id: "" as string,
+  // Cascade helpers (not persisted): Department → Program → Year → Section → Subject
+  form_department_id: "" as string,
+  form_program: "" as string,
+  form_year_level: "" as string,
 };
 
 function SchedulesPage() {

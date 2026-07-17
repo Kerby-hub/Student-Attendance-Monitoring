@@ -100,7 +100,7 @@ function StudentsPage() {
 
   const emptyForm = {
     student_no: "", first_name: "", last_name: "", middle_name: "",
-    email: "", contact_number: "", program: "", year_level: "1",
+    email: "", contact_number: "", department_id: "" as string, program: "", year_level: "1",
     section_id: "" as string,
     temp_password: "",
     guardian_name: "", guardian_relationship: "", guardian_phone: "",
@@ -423,6 +423,7 @@ function StudentsPage() {
   const openEdit = (s: Student) => {
     setEditing(s);
     setErrors({});
+    const sec = sections.find((x) => x.id === s.section_id);
     setForm({
       student_no: s.student_no,
       first_name: s.first_name ?? "",
@@ -430,6 +431,7 @@ function StudentsPage() {
       middle_name: s.middle_name ?? "",
       email: s.email ?? "",
       contact_number: s.contact_number ?? "",
+      department_id: sec?.department_id ?? "",
       program: s.program ?? "",
       year_level: s.year_level ? String(s.year_level) : "",
       section_id: s.section_id ?? "",
@@ -504,22 +506,68 @@ function StudentsPage() {
                   <Input value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} placeholder="+63..." />
                 </div>
                 <div>
-                  <Label>Program</Label>
-                  <Input value={form.program} onChange={(e) => setForm({ ...form, program: e.target.value })} placeholder="BSCS" />
+                  <Label>Department</Label>
+                  <Select
+                    value={form.department_id || "none"}
+                    onValueChange={(v) => setForm({ ...form, department_id: v === "none" ? "" : v, program: "", year_level: "", section_id: "" })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Department</SelectItem>
+                      {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Program/Course</Label>
+                  {(() => {
+                    const opts = Array.from(new Set(
+                      sections
+                        .filter((s) => !form.department_id || s.department_id === form.department_id)
+                        .map((s) => s.program)
+                        .filter((p): p is string => !!p),
+                    )).sort();
+                    const listId = `student-form-programs-${form.department_id || "any"}`;
+                    return (
+                      <>
+                        <Input
+                          value={form.program} list={listId}
+                          onChange={(e) => setForm({ ...form, program: e.target.value, year_level: "", section_id: "" })}
+                          placeholder="BSCS"
+                        />
+                        <datalist id={listId}>
+                          {opts.map((p) => <option key={p} value={p} />)}
+                        </datalist>
+                      </>
+                    );
+                  })()}
                 </div>
                 <div>
                   <Label>Year level</Label>
-                  <Select value={form.year_level} onValueChange={(v) => setForm({ ...form, year_level: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const opts = Array.from(new Set(
+                      sections
+                        .filter((s) => !form.department_id || s.department_id === form.department_id)
+                        .filter((s) => !form.program || s.program === form.program)
+                        .map((s) => s.year_level)
+                        .filter((y): y is number => y != null),
+                    )).sort((a, b) => a - b);
+                    const yearList = opts.length > 0 ? opts : [1, 2, 3, 4, 5];
+                    return (
+                      <Select value={form.year_level} onValueChange={(v) => setForm({ ...form, year_level: v, section_id: "" })}>
+                        <SelectTrigger><SelectValue placeholder="Select year level" /></SelectTrigger>
+                        <SelectContent>
+                          {yearList.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    );
+                  })()}
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Section<Req /></Label>
                   {(() => {
                     const opts = sections.filter((s) => {
+                      if (form.department_id && s.department_id !== form.department_id) return false;
                       if (form.program && s.program && s.program !== form.program) return false;
                       if (form.year_level && s.year_level != null && String(s.year_level) !== form.year_level) return false;
                       return true;
@@ -530,7 +578,7 @@ function StudentsPage() {
                           <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
                           <SelectContent>
                             {opts.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match the selected program/year.</div>
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match the selected department/program/year.</div>
                             ) : opts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>

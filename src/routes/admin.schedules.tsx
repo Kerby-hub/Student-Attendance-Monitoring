@@ -341,15 +341,112 @@ function SchedulesPage() {
               <DialogHeader className="border-b px-6 py-4"><DialogTitle>{editing ? "Edit schedule" : "New schedule"}</DialogTitle></DialogHeader>
               <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="grid gap-3 sm:grid-cols-2">
-
-                <div className="sm:col-span-2">
-                  <Label>Subject<RequiredMark /></Label>
-                  <Select value={form.subject_id} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>
-                    <SelectTrigger className={cn(errors.subject_id && invalidInputClass)}><SelectValue placeholder="Select subject" /></SelectTrigger>
-                    <SelectContent>{subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FieldError message={errors.subject_id} />
-                </div>
+                {/* Cascade filters: Department → Program → Year → Section → Subject */}
+                {(() => {
+                  const formProgramOpts = Array.from(new Set(
+                    sections
+                      .filter((s) => !form.form_department_id || s.department_id === form.form_department_id)
+                      .map((s) => s.program).filter((p): p is string => !!p),
+                  )).sort();
+                  const formYearOpts = Array.from(new Set(
+                    sections
+                      .filter((s) => !form.form_department_id || s.department_id === form.form_department_id)
+                      .filter((s) => !form.form_program || s.program === form.form_program)
+                      .map((s) => s.year_level).filter((y): y is number => y != null),
+                  )).sort((a, b) => a - b);
+                  const formSectionOpts = sections.filter((s) => {
+                    if (form.form_department_id && s.department_id !== form.form_department_id) return false;
+                    if (form.form_program && s.program !== form.form_program) return false;
+                    if (form.form_year_level && String(s.year_level ?? "") !== form.form_year_level) return false;
+                    return true;
+                  });
+                  // Subjects: filter by department; further narrow by whether the subject has
+                  // ever been scheduled in a matching section when program/year/section chosen.
+                  const scheduledSubjectIds = new Set<string>();
+                  for (const row of data) {
+                    const sec = row.sections;
+                    if (form.form_program && (sec?.program ?? "") !== form.form_program) continue;
+                    if (form.form_year_level) {
+                      const secFull = sections.find((x) => x.id === row.section_id);
+                      if (String(secFull?.year_level ?? "") !== form.form_year_level) continue;
+                    }
+                    if (form.section_id && row.section_id !== form.section_id) continue;
+                    scheduledSubjectIds.add(row.subject_id);
+                  }
+                  const narrowBySchedule = !!(form.form_program || form.form_year_level || form.section_id);
+                  const formSubjectOpts = subjects.filter((sub: { id: string; code: string; name: string; department_id?: string | null }) => {
+                    if (form.form_department_id && (sub.department_id ?? null) !== form.form_department_id) return false;
+                    if (narrowBySchedule && scheduledSubjectIds.size > 0 && !scheduledSubjectIds.has(sub.id)) return false;
+                    return true;
+                  });
+                  return (
+                    <>
+                      <div>
+                        <Label>Department</Label>
+                        <Select
+                          value={form.form_department_id || "any"}
+                          onValueChange={(v) => setForm({ ...form, form_department_id: v === "any" ? "" : v, form_program: "", form_year_level: "", section_id: "", subject_id: "" })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any Department</SelectItem>
+                            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Program/Course</Label>
+                        <Select
+                          value={form.form_program || "any"}
+                          onValueChange={(v) => setForm({ ...form, form_program: v === "any" ? "" : v, form_year_level: "", section_id: "", subject_id: "" })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select Program/Course" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any Program/Course</SelectItem>
+                            {formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Year Level</Label>
+                        <Select
+                          value={form.form_year_level || "any"}
+                          onValueChange={(v) => setForm({ ...form, form_year_level: v === "any" ? "" : v, section_id: "", subject_id: "" })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select Year Level" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="any">Any Year Level</SelectItem>
+                            {formYearOpts.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Section<RequiredMark /></Label>
+                        <Select value={form.section_id} onValueChange={(v) => { setForm({ ...form, section_id: v, subject_id: "" }); clearErr("section_id"); }}>
+                          <SelectTrigger className={cn(errors.section_id && invalidInputClass)}><SelectValue placeholder="Select Section" /></SelectTrigger>
+                          <SelectContent>
+                            {formSectionOpts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match.</div>
+                            ) : formSectionOpts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.school_year})</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FieldError message={errors.section_id} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label>Subject<RequiredMark /></Label>
+                        <Select value={form.subject_id} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>
+                          <SelectTrigger className={cn(errors.subject_id && invalidInputClass)}><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                          <SelectContent>
+                            {formSubjectOpts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No subjects match.</div>
+                            ) : formSubjectOpts.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FieldError message={errors.subject_id} />
+                      </div>
+                    </>
+                  );
+                })()}
                 <div>
                   <Label>Teacher<RequiredMark /></Label>
                   <Select value={form.teacher_id} onValueChange={(v) => { setForm({ ...form, teacher_id: v }); clearErr("teacher_id"); }}>
@@ -357,14 +454,6 @@ function SchedulesPage() {
                     <SelectContent>{teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}</SelectContent>
                   </Select>
                   <FieldError message={errors.teacher_id} />
-                </div>
-                <div>
-                  <Label>Section<RequiredMark /></Label>
-                  <Select value={form.section_id} onValueChange={(v) => { setForm({ ...form, section_id: v }); clearErr("section_id"); }}>
-                    <SelectTrigger className={cn(errors.section_id && invalidInputClass)}><SelectValue placeholder="Select section" /></SelectTrigger>
-                    <SelectContent>{sections.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.school_year})</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FieldError message={errors.section_id} />
                 </div>
                 <div><Label>Room</Label><Input value={form.room} onChange={(e) => setForm({ ...form, room: e.target.value })} placeholder="Rm 101" /></div>
                 <div className="sm:col-span-2">

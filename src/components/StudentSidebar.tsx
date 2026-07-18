@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   LayoutDashboard, ScanLine, ClipboardList, Calendar, Bell,
-  Radio, Megaphone, UserCog,
+  Radio, Megaphone, UserCog, BookOpen,
   GraduationCap as Logo,
 } from "lucide-react";
 import {

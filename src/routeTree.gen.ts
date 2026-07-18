@@ -28,6 +28,7 @@ import { Route as TeacherNotificationsRouteImport } from './routes/teacher.notif
 import { Route as TeacherCheckInRecordsRouteImport } from './routes/teacher.check-in-records'
 import { Route as TeacherCalendarRouteImport } from './routes/teacher.calendar'
 import { Route as TeacherAttendanceRouteImport } from './routes/teacher.attendance'
+import { Route as StudentSchedulesRouteImport } from './routes/student.schedules'
 import { Route as StudentProfileRouteImport } from './routes/student.profile'
 import { Route as StudentNotificationsRouteImport } from './routes/student.notifications'
 import { Route as StudentHistoryRouteImport } from './routes/student.history'
@@ -150,6 +151,11 @@ const TeacherAttendanceRoute = TeacherAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
   getParentRoute: () => TeacherRoute,
+} as any)
+const StudentSchedulesRoute = StudentSchedulesRouteImport.update({
+  id: '/schedules',
+  path: '/schedules',
+  getParentRoute: () => StudentRoute,
 } as any)
 const StudentProfileRoute = StudentProfileRouteImport.update({
   id: '/profile',
@@ -324,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/schedules': typeof StudentSchedulesRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/calendar': typeof TeacherCalendarRoute
   '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
@@ -369,6 +376,7 @@ export interface FileRoutesByTo {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/schedules': typeof StudentSchedulesRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/calendar': typeof TeacherCalendarRoute
   '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
@@ -418,6 +426,7 @@ export interface FileRoutesById {
   '/student/history': typeof StudentHistoryRoute
   '/student/notifications': typeof StudentNotificationsRoute
   '/student/profile': typeof StudentProfileRoute
+  '/student/schedules': typeof StudentSchedulesRoute
   '/teacher/attendance': typeof TeacherAttendanceRoute
   '/teacher/calendar': typeof TeacherCalendarRoute
   '/teacher/check-in-records': typeof TeacherCheckInRecordsRoute
@@ -468,6 +477,7 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/schedules'
     | '/teacher/attendance'
     | '/teacher/calendar'
     | '/teacher/check-in-records'
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/schedules'
     | '/teacher/attendance'
     | '/teacher/calendar'
     | '/teacher/check-in-records'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/student/history'
     | '/student/notifications'
     | '/student/profile'
+    | '/student/schedules'
     | '/teacher/attendance'
     | '/teacher/calendar'
     | '/teacher/check-in-records'
@@ -723,6 +735,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/teacher/attendance'
       preLoaderRoute: typeof TeacherAttendanceRouteImport
       parentRoute: typeof TeacherRoute
+    }
+    '/student/schedules': {
+      id: '/student/schedules'
+      path: '/schedules'
+      fullPath: '/student/schedules'
+      preLoaderRoute: typeof StudentSchedulesRouteImport
+      parentRoute: typeof StudentRoute
     }
     '/student/profile': {
       id: '/student/profile'
@@ -972,6 +991,7 @@ interface StudentRouteChildren {
   StudentHistoryRoute: typeof StudentHistoryRoute
   StudentNotificationsRoute: typeof StudentNotificationsRoute
   StudentProfileRoute: typeof StudentProfileRoute
+  StudentSchedulesRoute: typeof StudentSchedulesRoute
   StudentIndexRoute: typeof StudentIndexRoute
 }
 
@@ -981,6 +1001,7 @@ const StudentRouteChildren: StudentRouteChildren = {
   StudentHistoryRoute: StudentHistoryRoute,
   StudentNotificationsRoute: StudentNotificationsRoute,
   StudentProfileRoute: StudentProfileRoute,
+  StudentSchedulesRoute: StudentSchedulesRoute,
   StudentIndexRoute: StudentIndexRoute,
 }
 

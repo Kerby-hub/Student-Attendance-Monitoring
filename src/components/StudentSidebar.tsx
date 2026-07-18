@@ -25,6 +25,7 @@ const groups: NavGroup[] = [
   {
     label: "Student", icon: UserCog,
     items: [
+      { title: "My Schedule", url: "/student/schedules", icon: BookOpen },
       { title: "Calendar", url: "/student/calendar", icon: Calendar },
     ],
   },

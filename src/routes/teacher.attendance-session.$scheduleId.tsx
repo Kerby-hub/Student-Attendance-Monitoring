@@ -133,15 +133,14 @@ function AttendanceSessionPage() {
       if (Date.now() < end.getTime()) return;
       setSessionEnded(true);
       if (session && session.status === "open") {
+        // DB trigger `attendance_session_on_close_trg` handles inserting
+        // absent rows for students who did not check in. Do not insert here
+        // — the unique (session_id, student_id) constraint would collide.
         await supabase.from("attendance_sessions")
           .update({ status: "closed", closed_at: new Date().toISOString() })
           .eq("id", session.id);
-        if (missing.length > 0) {
-          await supabase.from("attendance_records").insert(
-            missing.map((s) => ({ session_id: session.id, student_id: s.id, status: "absent" }))
-          );
-        }
         setSession((s) => (s ? { ...s, status: "closed", closed_at: new Date().toISOString() } : s));
+        refetchRoster();
         toast.info("Session ended", { description: "Scheduled end time reached. Check-in is now closed." });
       }
     };
@@ -149,7 +148,7 @@ function AttendanceSessionPage() {
     const t = setInterval(check, 5000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schedule?.end_time, session?.id, session?.status, session?.opened_at, missing.length]);
+  }, [schedule?.end_time, session?.id, session?.status, session?.opened_at]);
 
   // QR rotation
   useEffect(() => {

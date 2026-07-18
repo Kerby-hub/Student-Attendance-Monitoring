@@ -266,6 +266,9 @@ function AttendanceSessionPage() {
                   <RefreshCw className="h-3.5 w-3.5" />
                   Rotates in {secsLeft}s (token #{tick})
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Late after {lateGraceMinutes} minute{lateGraceMinutes === 1 ? "" : "s"} from session start.
+                </p>
               </div>
             ) : (
               <div className="grid h-[360px] w-[360px] place-items-center rounded-lg border-2 border-dashed p-6 text-center text-muted-foreground">

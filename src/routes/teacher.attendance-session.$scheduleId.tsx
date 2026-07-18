@@ -271,7 +271,7 @@ function AttendanceSessionPage() {
                   Rotates in {secsLeft}s (token #{tick})
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Late after {lateGraceMinutes} minute{lateGraceMinutes === 1 ? "" : "s"} from session start.
+                  Late after schedule end time: {lateGraceMinutes} minute{lateGraceMinutes === 1 ? "" : "s"} grace period
                 </p>
               </div>
             ) : (

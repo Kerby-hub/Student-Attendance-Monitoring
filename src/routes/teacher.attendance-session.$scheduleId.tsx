@@ -207,15 +207,14 @@ function AttendanceSessionPage() {
     if (!session) return;
     setClosing(true);
     try {
-      await supabase.from("attendance_sessions")
+      // DB trigger `attendance_session_on_close_trg` inserts absent rows for
+      // students without an existing record and skips those already present
+      // or late via ON CONFLICT (session_id, student_id) DO NOTHING.
+      // The `attendance_record_notify_trg` then queues guardian SMS logs.
+      const { error: closeErr } = await supabase.from("attendance_sessions")
         .update({ status: "closed", closed_at: new Date().toISOString() })
         .eq("id", session.id);
-      // Mark missing students as absent
-      if (missing.length > 0) {
-        await supabase.from("attendance_records").insert(
-          missing.map((s) => ({ session_id: session.id, student_id: s.id, status: "absent" }))
-        );
-      }
+      if (closeErr) throw closeErr;
       toast.success("Session closed");
       navigate({ to: "/teacher" });
     } catch (e) {

@@ -33,25 +33,29 @@ function AttendanceSessionPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [tick, setTick] = useState(0);
   const [rotationSecs, setRotationSecs] = useState<number>(15);
+  const [lateGraceMinutes, setLateGraceMinutes] = useState<number>(10);
   const [secsLeft, setSecsLeft] = useState(15);
   const [sessionEnded, setSessionEnded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [closeOpen, setCloseOpen] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  // Load QR rotation interval from system_settings (fallback 15s).
+  // Load QR rotation interval + late grace from system_settings.
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("system_settings")
-        .select("value")
-        .eq("key", "qr_rotation_seconds")
-        .maybeSingle();
-      const raw = (data as { value: unknown } | null)?.value;
-      const parsed = typeof raw === "number" ? raw : Number(raw);
-      if (Number.isFinite(parsed) && parsed >= 5 && parsed <= 300) {
-        setRotationSecs(parsed);
-        setSecsLeft(parsed);
+        .select("key,value")
+        .in("key", ["qr_rotation_seconds", "late_grace_minutes"]);
+      for (const row of (data ?? []) as { key: string; value: unknown }[]) {
+        const parsed = typeof row.value === "number" ? row.value : Number(row.value);
+        if (!Number.isFinite(parsed)) continue;
+        if (row.key === "qr_rotation_seconds" && parsed >= 5 && parsed <= 300) {
+          setRotationSecs(parsed);
+          setSecsLeft(parsed);
+        } else if (row.key === "late_grace_minutes" && parsed >= 0 && parsed <= 240) {
+          setLateGraceMinutes(parsed);
+        }
       }
     })();
   }, []);
@@ -266,6 +270,9 @@ function AttendanceSessionPage() {
                   <RefreshCw className="h-3.5 w-3.5" />
                   Rotates in {secsLeft}s (token #{tick})
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Late after {lateGraceMinutes} minute{lateGraceMinutes === 1 ? "" : "s"} from session start.
+                </p>
               </div>
             ) : (
               <div className="grid h-[360px] w-[360px] place-items-center rounded-lg border-2 border-dashed p-6 text-center text-muted-foreground">

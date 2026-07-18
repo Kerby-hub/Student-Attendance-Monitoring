@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   LayoutDashboard, ScanLine, ClipboardList, Calendar, Bell,
-  Radio, Megaphone, UserCog,
+  Radio, Megaphone, UserCog, BookOpen,
   GraduationCap as Logo,
 } from "lucide-react";
 import {
@@ -25,6 +25,7 @@ const groups: NavGroup[] = [
   {
     label: "Student", icon: UserCog,
     items: [
+      { title: "My Schedule", url: "/student/schedules", icon: BookOpen },
       { title: "Calendar", url: "/student/calendar", icon: Calendar },
     ],
   },

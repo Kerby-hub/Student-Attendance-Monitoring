@@ -33,6 +33,7 @@ function AttendanceSessionPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [tick, setTick] = useState(0);
   const [rotationSecs, setRotationSecs] = useState<number>(15);
+  const [lateGraceMinutes, setLateGraceMinutes] = useState<number>(10);
   const [secsLeft, setSecsLeft] = useState(15);
   const [sessionEnded, setSessionEnded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

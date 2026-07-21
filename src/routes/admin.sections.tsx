@@ -223,8 +223,19 @@ function SectionsPage() {
                 </div>
                 <div>
                   <Label>Year level<span className="text-destructive"> *</span></Label>
-                  <Input type="number" min={1} max={10} value={form.year_level} aria-invalid={!!errors.year_level}
-                    onChange={(e) => { setForm({ ...form, year_level: Number(e.target.value) }); if (errors.year_level) setErrors((er) => { const n = { ...er }; delete n.year_level; return n; }); }} />
+                  <Select
+                    value={form.year_level ? String(form.year_level) : ""}
+                    onValueChange={(v) => { setForm({ ...form, year_level: Number(v) }); if (errors.year_level) setErrors((er) => { const n = { ...er }; delete n.year_level; return n; }); }}
+                  >
+                    <SelectTrigger aria-invalid={!!errors.year_level}><SelectValue placeholder="Select Year Level" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1st Year</SelectItem>
+                      <SelectItem value="2">2nd Year</SelectItem>
+                      <SelectItem value="3">3rd Year</SelectItem>
+                      <SelectItem value="4">4th Year</SelectItem>
+                      <SelectItem value="5">5th Year</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {errors.year_level && <p className="mt-1 text-xs text-destructive">{errors.year_level}</p>}
                 </div>
                 <div className="sm:col-span-2">

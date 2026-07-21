@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -404,8 +404,9 @@ function EventFormDialog({
   }, [open, initial?.id]);
 
   const initialDate = start.date;
+  const submittingRef = useRef(false);
   const submit = () => {
-    if (submitting) return; // guard against double-submit
+    if (submitting || submittingRef.current) return; // guard against double-submit
     const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = "Event title is required.";
     if (!date) errs.date = "Start date is required.";
@@ -428,11 +429,17 @@ function EventFormDialog({
       first?.focus();
       return;
     }
-    onSubmit({
-      title: title.trim(), description: description.trim(),
-      audience, event_type: eventType, location: location.trim(),
-      starts_at: startsIso, ends_at: endsIso,
-    });
+    submittingRef.current = true;
+    try {
+      onSubmit({
+        title: title.trim(), description: description.trim(),
+        audience, event_type: eventType, location: location.trim(),
+        starts_at: startsIso, ends_at: endsIso,
+      });
+    } finally {
+      // Release on next tick so React commits the parent's submitting state.
+      setTimeout(() => { submittingRef.current = false; }, 0);
+    }
   };
 
   return (

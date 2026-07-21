@@ -17,7 +17,7 @@ export const Route = createFileRoute("/admin/students_/$id")({
 });
 
 function StudentDetailsPage() {
-  const { id } = useParams({ from: "/admin/students/$id" });
+  const { id } = useParams({ from: "/admin/students_/$id" });
 
   const { data: student, isLoading } = useQuery({
     queryKey: ["student", id],

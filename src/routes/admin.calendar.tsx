@@ -429,11 +429,17 @@ function EventFormDialog({
       first?.focus();
       return;
     }
-    onSubmit({
-      title: title.trim(), description: description.trim(),
-      audience, event_type: eventType, location: location.trim(),
-      starts_at: startsIso, ends_at: endsIso,
-    });
+    submittingRef.current = true;
+    try {
+      onSubmit({
+        title: title.trim(), description: description.trim(),
+        audience, event_type: eventType, location: location.trim(),
+        starts_at: startsIso, ends_at: endsIso,
+      });
+    } finally {
+      // Release on next tick so React commits the parent's submitting state.
+      setTimeout(() => { submittingRef.current = false; }, 0);
+    }
   };
 
   return (

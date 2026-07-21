@@ -404,8 +404,9 @@ function EventFormDialog({
   }, [open, initial?.id]);
 
   const initialDate = start.date;
+  const submittingRef = useRef(false);
   const submit = () => {
-    if (submitting) return; // guard against double-submit
+    if (submitting || submittingRef.current) return; // guard against double-submit
     const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = "Event title is required.";
     if (!date) errs.date = "Start date is required.";

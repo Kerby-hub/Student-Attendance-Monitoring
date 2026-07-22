@@ -402,7 +402,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Program/Course" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">— Clear filter —</SelectItem>
+                            <SelectItem value="any">Select Program/Course</SelectItem>
                             {formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                           </SelectContent>
                         </Select>

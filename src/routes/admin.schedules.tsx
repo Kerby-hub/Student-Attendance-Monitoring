@@ -415,7 +415,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Year Level" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">— Clear filter —</SelectItem>
+                            <SelectItem value="any">Select Year Level</SelectItem>
                             {[1,2,3,4,5].map((y) => <SelectItem key={y} value={String(y)}>{y === 1 ? "1st Year" : y === 2 ? "2nd Year" : y === 3 ? "3rd Year" : y === 4 ? "4th Year" : "5th Year"}</SelectItem>)}
                           </SelectContent>
                         </Select>

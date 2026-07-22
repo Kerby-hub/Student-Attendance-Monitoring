@@ -777,7 +777,7 @@ function StudentsPage() {
                 <TableCell><Badge variant={STATUS_VARIANTS[s.status]}>{s.status}</Badge></TableCell>
                 <TableCell className="text-right">
                   <Button asChild variant="ghost" size="icon" title="View">
-                    <Link to="/admin/students_/$id" params={{ id: s.id }}><Eye className="h-4 w-4" /></Link>
+                    <Link to="/admin/students/$id" params={{ id: s.id }}><Eye className="h-4 w-4" /></Link>
                   </Button>
                   <Button variant="ghost" size="icon" title="Edit" onClick={() => openEdit(s)}>
                     <Pencil className="h-4 w-4" />

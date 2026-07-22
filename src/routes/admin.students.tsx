@@ -578,7 +578,7 @@ function StudentsPage() {
                           <SelectTrigger aria-invalid={!!errors.section_id}><SelectValue placeholder="Select Section" /></SelectTrigger>
                           <SelectContent>
                             {opts.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match the selected department/program/year.</div>
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
                             ) : opts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>

@@ -698,7 +698,7 @@ function StudentsPage() {
             placeholder="Search name, ID, email…" className="pl-8"
           />
         </div>
-        <Select value={filterDept} onValueChange={changeDept}>
+        <Select value={filterDept === "all" ? undefined : filterDept} onValueChange={changeDept}>
           <SelectTrigger><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
             {depts.length === 0 ? (
@@ -706,7 +706,7 @@ function StudentsPage() {
             ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterProgram} onValueChange={changeProgram}>
+        <Select value={filterProgram === "all" ? undefined : filterProgram} onValueChange={changeProgram}>
           <SelectTrigger><SelectValue placeholder={programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
             {programs.length === 0 ? (
@@ -714,7 +714,7 @@ function StudentsPage() {
             ) : programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterYear} onValueChange={changeYear}>
+        <Select value={filterYear === "all" ? undefined : filterYear} onValueChange={changeYear}>
           <SelectTrigger><SelectValue placeholder={yearOptions.length === 0 ? "No records added." : "Select Year Level"} /></SelectTrigger>
           <SelectContent>
             {yearOptions.length === 0 ? (
@@ -722,7 +722,7 @@ function StudentsPage() {
             ) : yearOptions.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterSection} onValueChange={setFilterSection}>
+        <Select value={filterSection === "all" ? undefined : filterSection} onValueChange={setFilterSection}>
           <SelectTrigger><SelectValue placeholder={sectionOptions.length === 0 ? "No records added." : "Select Section"} /></SelectTrigger>
           <SelectContent>
             {sectionOptions.length === 0 ? (

@@ -125,15 +125,21 @@ function SchedulesPage() {
     queryKey: ["departments-for-schedule"],
     queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data ?? [],
   });
+  const { data: programsList = [] } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("programs" as any).select("id, code, name, department_id, status").order("code");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; code: string; name: string; department_id: string; status: string }[];
+    },
+  });
   // Dependent options — Department → Program → Section → Subject
   const programOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of sections) {
-      if (fDept !== "all" && s.department_id !== fDept) continue;
-      if (s.program?.trim()) set.add(s.program.trim());
-    }
-    return Array.from(set).sort();
-  }, [sections, fDept]);
+    return programsList
+      .filter((p) => p.status === "active" && (fDept === "all" || p.department_id === fDept))
+      .map((p) => p.code);
+  }, [programsList, fDept]);
 
   const sectionOptions = useMemo(() => {
     return sections.filter((s) => {

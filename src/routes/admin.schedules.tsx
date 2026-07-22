@@ -419,7 +419,7 @@ function SchedulesPage() {
                           <SelectContent>
                             {formProgramOpts.length === 0 ? (
                               <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
-                            ) : formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            ) : formProgramOpts.map((p) => <SelectItem key={p.code} value={p.code}>{p.code} — {p.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>

@@ -349,11 +349,9 @@ function SchedulesPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {/* Cascade filters: Department → Program → Year → Section → Subject */}
                 {(() => {
-                  const formProgramOpts = Array.from(new Set(
-                    sections
-                      .filter((s) => !form.form_department_id || s.department_id === form.form_department_id)
-                      .map((s) => s.program).filter((p): p is string => !!p),
-                  )).sort();
+                  const formProgramOpts = programsList
+                    .filter((p) => p.status === "active" && (!form.form_department_id || p.department_id === form.form_department_id))
+                    .map((p) => ({ code: p.code, name: p.name }));
                   const formYearOpts = Array.from(new Set(
                     sections
                       .filter((s) => !form.form_department_id || s.department_id === form.form_department_id)

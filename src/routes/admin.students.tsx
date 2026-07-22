@@ -699,31 +699,35 @@ function StudentsPage() {
           />
         </div>
         <Select value={filterDept} onValueChange={changeDept}>
-          <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            {depts.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterProgram} onValueChange={changeProgram}>
-          <SelectTrigger><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Programs/Courses</SelectItem>
-            {programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            {programs.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterYear} onValueChange={changeYear}>
-          <SelectTrigger><SelectValue placeholder="All Year Levels" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={yearOptions.length === 0 ? "No records added." : "Select Year Level"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Year Levels</SelectItem>
-            {(yearOptions.length > 0 ? yearOptions : [1, 2, 3, 4, 5]).map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+            {yearOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : yearOptions.map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterSection} onValueChange={setFilterSection}>
-          <SelectTrigger><SelectValue placeholder="All Sections" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={sectionOptions.length === 0 ? "No records added." : "Select Section"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Sections</SelectItem>
-            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {sectionOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>

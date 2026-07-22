@@ -240,7 +240,7 @@ function SubjectsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={fDept} onValueChange={setFDept}>
+        <Select value={fDept === "all" ? undefined : fDept} onValueChange={setFDept}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
             {depts.length === 0 ? (
@@ -248,7 +248,7 @@ function SubjectsPage() {
             ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fProgram} onValueChange={setFProgram}>
+        <Select value={fProgram === "all" ? undefined : fProgram} onValueChange={setFProgram}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectPrograms.programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
             {subjectPrograms.programs.length === 0 ? (

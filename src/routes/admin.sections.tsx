@@ -68,6 +68,16 @@ function SectionsPage() {
     },
   });
 
+  const { data: programs = [] } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("programs" as any).select("id, code, name, department_id, status").order("code");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; code: string; name: string; department_id: string; status: string }[];
+    },
+  });
+
   // Dependent options: Department → Program → Year
   const programOptions = useMemo(
     () => Array.from(new Set(

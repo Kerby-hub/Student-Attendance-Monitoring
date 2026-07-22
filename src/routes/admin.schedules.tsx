@@ -389,7 +389,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">— Clear filter —</SelectItem>
+                            <SelectItem value="any">Select Department</SelectItem>
                             {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                           </SelectContent>
                         </Select>

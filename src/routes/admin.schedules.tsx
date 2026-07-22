@@ -389,7 +389,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">All Departments</SelectItem>
+                            <SelectItem value="any">— Clear filter —</SelectItem>
                             {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -402,7 +402,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Program/Course" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">All Programs</SelectItem>
+                            <SelectItem value="any">— Clear filter —</SelectItem>
                             {formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -415,7 +415,7 @@ function SchedulesPage() {
                         >
                           <SelectTrigger><SelectValue placeholder="Select Year Level" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">All Year Levels</SelectItem>
+                            <SelectItem value="any">— Clear filter —</SelectItem>
                             {[1,2,3,4,5].map((y) => <SelectItem key={y} value={String(y)}>{y === 1 ? "1st Year" : y === 2 ? "2nd Year" : y === 3 ? "3rd Year" : y === 4 ? "4th Year" : "5th Year"}</SelectItem>)}
                           </SelectContent>
                         </Select>

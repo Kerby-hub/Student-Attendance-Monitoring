@@ -145,6 +145,16 @@ function StudentsPage() {
     queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data as { id: string; name: string }[] ?? [],
   });
 
+  const { data: programsList = [] } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("programs" as any).select("id, code, name, department_id, status").order("code");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; code: string; name: string; department_id: string; status: string }[];
+    },
+  });
+
   // Dependent option lists: Department → Program → Year → Section
   const programs = useMemo(() => {
     const set = new Set<string>();
@@ -521,24 +531,32 @@ function StudentsPage() {
                 <div>
                   <Label>Program/Course</Label>
                   {(() => {
-                    const opts = Array.from(new Set(
-                      sections
-                        .filter((s) => !form.department_id || s.department_id === form.department_id)
-                        .map((s) => s.program)
-                        .filter((p): p is string => !!p),
-                    )).sort();
-                    const listId = `student-form-programs-${form.department_id || "any"}`;
+                    const opts = programsList.filter(
+                      (p) => p.status === "active" && (!form.department_id || p.department_id === form.department_id),
+                    );
                     return (
-                      <>
-                        <Input
-                          value={form.program} list={listId}
-                          onChange={(e) => setForm({ ...form, program: e.target.value, year_level: "", section_id: "" })}
-                          placeholder="BSCS"
-                        />
-                        <datalist id={listId}>
-                          {opts.map((p) => <option key={p} value={p} />)}
-                        </datalist>
-                      </>
+                      <Select
+                        value={form.program || undefined}
+                        onValueChange={(v) => setForm({ ...form, program: v, year_level: "", section_id: "" })}
+                        disabled={!form.department_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            !form.department_id
+                              ? "Select Department first"
+                              : opts.length === 0
+                                ? "No records added."
+                                : "Select Program/Course"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {opts.length === 0 ? (
+                            <div className="px-2 py-4 text-center text-sm text-muted-foreground">No records added.</div>
+                          ) : opts.map((p) => (
+                            <SelectItem key={p.id} value={p.code}>{p.code} — {p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     );
                   })()}
                 </div>

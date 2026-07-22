@@ -42,6 +42,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
 import { Route as AdminSchedulesRouteImport } from './routes/admin.schedules'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminProgramsRouteImport } from './routes/admin.programs'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminLocationRouteImport } from './routes/admin.location'
 import { Route as AdminGeofencingRouteImport } from './routes/admin.geofencing'
@@ -222,6 +223,11 @@ const AdminReportsRoute = AdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProgramsRoute = AdminProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/programs': typeof AdminProgramsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/sections': typeof AdminSectionsRoute
@@ -363,6 +370,7 @@ export interface FileRoutesByTo {
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/programs': typeof AdminProgramsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/sections': typeof AdminSectionsRoute
@@ -413,6 +421,7 @@ export interface FileRoutesById {
   '/admin/geofencing': typeof AdminGeofencingRoute
   '/admin/location': typeof AdminLocationRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/programs': typeof AdminProgramsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/schedules': typeof AdminSchedulesRoute
   '/admin/sections': typeof AdminSectionsRoute
@@ -464,6 +473,7 @@ export interface FileRouteTypes {
     | '/admin/geofencing'
     | '/admin/location'
     | '/admin/notifications'
+    | '/admin/programs'
     | '/admin/reports'
     | '/admin/schedules'
     | '/admin/sections'
@@ -510,6 +520,7 @@ export interface FileRouteTypes {
     | '/admin/geofencing'
     | '/admin/location'
     | '/admin/notifications'
+    | '/admin/programs'
     | '/admin/reports'
     | '/admin/schedules'
     | '/admin/sections'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/admin/geofencing'
     | '/admin/location'
     | '/admin/notifications'
+    | '/admin/programs'
     | '/admin/reports'
     | '/admin/schedules'
     | '/admin/sections'
@@ -834,6 +846,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReportsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/programs': {
+      id: '/admin/programs'
+      path: '/programs'
+      fullPath: '/admin/programs'
+      preLoaderRoute: typeof AdminProgramsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/notifications': {
       id: '/admin/notifications'
       path: '/notifications'
@@ -947,6 +966,7 @@ interface AdminRouteChildren {
   AdminGeofencingRoute: typeof AdminGeofencingRoute
   AdminLocationRoute: typeof AdminLocationRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminProgramsRoute: typeof AdminProgramsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminSchedulesRoute: typeof AdminSchedulesRoute
   AdminSectionsRoute: typeof AdminSectionsRoute
@@ -971,6 +991,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminGeofencingRoute: AdminGeofencingRoute,
   AdminLocationRoute: AdminLocationRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminProgramsRoute: AdminProgramsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminSchedulesRoute: AdminSchedulesRoute,
   AdminSectionsRoute: AdminSectionsRoute,

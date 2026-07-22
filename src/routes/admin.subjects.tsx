@@ -241,17 +241,19 @@ function SubjectsPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Select value={fDept} onValueChange={setFDept}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            {depts.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fProgram} onValueChange={setFProgram}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectPrograms.programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Programs/Courses</SelectItem>
-            {subjectPrograms.programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            {subjectPrograms.programs.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : subjectPrograms.programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fDept !== "all" || fProgram !== "all") && (

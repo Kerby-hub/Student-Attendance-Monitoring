@@ -263,11 +263,11 @@ function SubjectsPage() {
           </SelectContent>
         </Select>
         <Select value={fProgram === "all" ? undefined : fProgram} onValueChange={setFProgram}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectPrograms.programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={programOptions.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
-            {subjectPrograms.programs.length === 0 ? (
+            {programOptions.length === 0 ? (
               <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
-            ) : subjectPrograms.programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            ) : programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fDept !== "all" || fProgram !== "all") && (

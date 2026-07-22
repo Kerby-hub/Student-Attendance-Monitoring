@@ -382,51 +382,67 @@ function SchedulesPage() {
                   return (
                     <>
                       <div>
-                        <Label>Department</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>Department</Label>
+                          {form.form_department_id && (
+                            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setForm({ ...form, form_department_id: "", form_program: "", form_year_level: "", section_id: "", subject_id: "" })}>Clear</button>
+                          )}
+                        </div>
                         <Select
-                          value={form.form_department_id || "any"}
-                          onValueChange={(v) => setForm({ ...form, form_department_id: v === "any" ? "" : v, form_program: "", form_year_level: "", section_id: "", subject_id: "" })}
+                          value={form.form_department_id || undefined}
+                          onValueChange={(v) => setForm({ ...form, form_department_id: v, form_program: "", form_year_level: "", section_id: "", subject_id: "" })}
                         >
-                          <SelectTrigger><SelectValue placeholder="Select Department" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">Select Department</SelectItem>
-                            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                            {depts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+                            ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>Program/Course</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>Program/Course</Label>
+                          {form.form_program && (
+                            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setForm({ ...form, form_program: "", form_year_level: "", section_id: "", subject_id: "" })}>Clear</button>
+                          )}
+                        </div>
                         <Select
-                          value={form.form_program || "any"}
-                          onValueChange={(v) => setForm({ ...form, form_program: v === "any" ? "" : v, form_year_level: "", section_id: "", subject_id: "" })}
+                          value={form.form_program || undefined}
+                          onValueChange={(v) => setForm({ ...form, form_program: v, form_year_level: "", section_id: "", subject_id: "" })}
                         >
-                          <SelectTrigger><SelectValue placeholder="Select Program/Course" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={formProgramOpts.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">Select Program/Course</SelectItem>
-                            {formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            {formProgramOpts.length === 0 ? (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+                            ) : formProgramOpts.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label>Year Level</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>Year Level</Label>
+                          {form.form_year_level && (
+                            <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setForm({ ...form, form_year_level: "", section_id: "", subject_id: "" })}>Clear</button>
+                          )}
+                        </div>
                         <Select
-                          value={form.form_year_level || "any"}
-                          onValueChange={(v) => setForm({ ...form, form_year_level: v === "any" ? "" : v, section_id: "", subject_id: "" })}
+                          value={form.form_year_level || undefined}
+                          onValueChange={(v) => setForm({ ...form, form_year_level: v, section_id: "", subject_id: "" })}
                         >
                           <SelectTrigger><SelectValue placeholder="Select Year Level" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="any">Select Year Level</SelectItem>
                             {[1,2,3,4,5].map((y) => <SelectItem key={y} value={String(y)}>{y === 1 ? "1st Year" : y === 2 ? "2nd Year" : y === 3 ? "3rd Year" : y === 4 ? "4th Year" : "5th Year"}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label>Section<RequiredMark /></Label>
-                        <Select value={form.section_id} onValueChange={(v) => { setForm({ ...form, section_id: v, subject_id: "" }); clearErr("section_id"); }}>
-                          <SelectTrigger className={cn(errors.section_id && invalidInputClass)}><SelectValue placeholder="Select Section" /></SelectTrigger>
+                        <Select value={form.section_id || undefined} onValueChange={(v) => { setForm({ ...form, section_id: v, subject_id: "" }); clearErr("section_id"); }}>
+                          <SelectTrigger className={cn(errors.section_id && invalidInputClass)}><SelectValue placeholder={formSectionOpts.length === 0 ? "No records added." : "Select Section"} /></SelectTrigger>
                           <SelectContent>
                             {formSectionOpts.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No sections match.</div>
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
                             ) : formSectionOpts.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.school_year})</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -434,11 +450,11 @@ function SchedulesPage() {
                       </div>
                       <div className="sm:col-span-2">
                         <Label>Subject<RequiredMark /></Label>
-                        <Select value={form.subject_id} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>
-                          <SelectTrigger className={cn(errors.subject_id && invalidInputClass)}><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                        <Select value={form.subject_id || undefined} onValueChange={(v) => { setForm({ ...form, subject_id: v }); clearErr("subject_id"); }}>
+                          <SelectTrigger className={cn(errors.subject_id && invalidInputClass)}><SelectValue placeholder={formSubjectOpts.length === 0 ? "No records added." : "Select Subject"} /></SelectTrigger>
                           <SelectContent>
                             {formSubjectOpts.length === 0 ? (
-                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No subjects match.</div>
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
                             ) : formSubjectOpts.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
@@ -449,9 +465,13 @@ function SchedulesPage() {
                 })()}
                 <div>
                   <Label>Teacher<RequiredMark /></Label>
-                  <Select value={form.teacher_id} onValueChange={(v) => { setForm({ ...form, teacher_id: v }); clearErr("teacher_id"); }}>
-                    <SelectTrigger className={cn(errors.teacher_id && invalidInputClass)}><SelectValue placeholder="Select teacher" /></SelectTrigger>
-                    <SelectContent>{teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}</SelectContent>
+                  <Select value={form.teacher_id || undefined} onValueChange={(v) => { setForm({ ...form, teacher_id: v }); clearErr("teacher_id"); }}>
+                    <SelectTrigger className={cn(errors.teacher_id && invalidInputClass)}><SelectValue placeholder={teachers.length === 0 ? "No records added." : "Select Teacher"} /></SelectTrigger>
+                    <SelectContent>
+                      {teachers.length === 0 ? (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+                      ) : teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+                    </SelectContent>
                   </Select>
                   <FieldError message={errors.teacher_id} />
                 </div>

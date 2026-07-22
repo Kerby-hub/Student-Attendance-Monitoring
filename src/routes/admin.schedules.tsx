@@ -592,38 +592,43 @@ function SchedulesPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <Select value={fDept} onValueChange={(v) => { setFDept(v); setFProgram("all"); setFSection("all"); setFSubject("all"); }}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Departments" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            {depts.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fProgram} onValueChange={(v) => { setFProgram(v); setFSection("all"); }}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Programs/Courses" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={programOptions.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Programs/Courses</SelectItem>
-            {programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            {programOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fSection} onValueChange={setFSection}>
-          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Sections" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={sectionOptions.length === 0 ? "No records added." : "Select Section"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Sections</SelectItem>
-            {sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {sectionOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fSubject} onValueChange={setFSubject}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Subjects" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectOptions.length === 0 ? "No records added." : "Select Subject"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Subjects</SelectItem>
-            {subjectOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
+            {subjectOptions.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : subjectOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={fTeacher} onValueChange={setFTeacher}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Teachers" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={teachers.length === 0 ? "No records added." : "Select Teacher"} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Teachers</SelectItem>
-            {teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
+            {teachers.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
+            ) : teachers.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fSection !== "all" || fSubject !== "all" || fTeacher !== "all" || fDept !== "all" || fProgram !== "all") && (

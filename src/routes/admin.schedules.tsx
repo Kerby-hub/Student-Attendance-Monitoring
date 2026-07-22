@@ -591,7 +591,7 @@ function SchedulesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={fDept} onValueChange={(v) => { setFDept(v); setFProgram("all"); setFSection("all"); setFSubject("all"); }}>
+        <Select value={fDept === "all" ? undefined : fDept} onValueChange={(v) => { setFDept(v); setFProgram("all"); setFSection("all"); setFSubject("all"); }}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
             {depts.length === 0 ? (
@@ -599,7 +599,7 @@ function SchedulesPage() {
             ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fProgram} onValueChange={(v) => { setFProgram(v); setFSection("all"); }}>
+        <Select value={fProgram === "all" ? undefined : fProgram} onValueChange={(v) => { setFProgram(v); setFSection("all"); }}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={programOptions.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
             {programOptions.length === 0 ? (
@@ -607,7 +607,7 @@ function SchedulesPage() {
             ) : programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fSection} onValueChange={setFSection}>
+        <Select value={fSection === "all" ? undefined : fSection} onValueChange={setFSection}>
           <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={sectionOptions.length === 0 ? "No records added." : "Select Section"} /></SelectTrigger>
           <SelectContent>
             {sectionOptions.length === 0 ? (
@@ -615,7 +615,7 @@ function SchedulesPage() {
             ) : sectionOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fSubject} onValueChange={setFSubject}>
+        <Select value={fSubject === "all" ? undefined : fSubject} onValueChange={setFSubject}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectOptions.length === 0 ? "No records added." : "Select Subject"} /></SelectTrigger>
           <SelectContent>
             {subjectOptions.length === 0 ? (
@@ -623,7 +623,7 @@ function SchedulesPage() {
             ) : subjectOptions.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} — {s.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fTeacher} onValueChange={setFTeacher}>
+        <Select value={fTeacher === "all" ? undefined : fTeacher} onValueChange={setFTeacher}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={teachers.length === 0 ? "No records added." : "Select Teacher"} /></SelectTrigger>
           <SelectContent>
             {teachers.length === 0 ? (

@@ -268,7 +268,7 @@ function SectionsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Select value={fDept} onValueChange={changeDept}>
+        <Select value={fDept === "all" ? undefined : fDept} onValueChange={changeDept}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={depts.length === 0 ? "No records added." : "Select Department"} /></SelectTrigger>
           <SelectContent>
             {depts.length === 0 ? (
@@ -276,7 +276,7 @@ function SectionsPage() {
             ) : depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fProgram} onValueChange={changeProgram}>
+        <Select value={fProgram === "all" ? undefined : fProgram} onValueChange={changeProgram}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={programOptions.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
             {programOptions.length === 0 ? (
@@ -284,7 +284,7 @@ function SectionsPage() {
             ) : programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={fYear} onValueChange={setFYear}>
+        <Select value={fYear === "all" ? undefined : fYear} onValueChange={setFYear}>
           <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder={yearOptions.length === 0 ? "No records added." : "Select Year Level"} /></SelectTrigger>
           <SelectContent>
             {yearOptions.length === 0 ? (

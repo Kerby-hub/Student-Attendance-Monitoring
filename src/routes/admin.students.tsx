@@ -145,6 +145,16 @@ function StudentsPage() {
     queryFn: async () => (await supabase.from("departments").select("id, name").order("name")).data as { id: string; name: string }[] ?? [],
   });
 
+  const { data: programsList = [] } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("programs" as any).select("id, code, name, department_id, status").order("code");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; code: string; name: string; department_id: string; status: string }[];
+    },
+  });
+
   // Dependent option lists: Department → Program → Year → Section
   const programs = useMemo(() => {
     const set = new Set<string>();

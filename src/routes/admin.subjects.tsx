@@ -63,27 +63,41 @@ function SubjectsPage() {
     },
   });
 
+  const { data: programsList = [] } = useQuery({
+    queryKey: ["programs"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await supabase.from("programs" as any).select("id, code, name, department_id, status").order("code");
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; code: string; name: string; department_id: string; status: string }[];
+    },
+  });
+
   // Map subject_id → set of programs it is scheduled for, derived from
   // class_schedules → sections.program. Enables filtering subjects by Program/Course.
-  const { data: subjectPrograms = { programs: [], map: new Map<string, Set<string>>() } } = useQuery({
+  const { data: subjectPrograms = { map: new Map<string, Set<string>>() } } = useQuery({
     queryKey: ["subject-programs"],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await supabase.from("class_schedules").select("subject_id, sections(program)" as any);
       if (error) throw error;
       const map = new Map<string, Set<string>>();
-      const all = new Set<string>();
       for (const row of (data ?? []) as unknown as { subject_id: string; sections: { program: string | null } | null }[]) {
         const p = row.sections?.program?.trim();
         if (!p) continue;
-        all.add(p);
         const set = map.get(row.subject_id) ?? new Set<string>();
         set.add(p);
         map.set(row.subject_id, set);
       }
-      return { programs: Array.from(all).sort(), map };
+      return { map };
     },
   });
+
+  const programOptions = useMemo(() => {
+    return programsList
+      .filter((p) => p.status === "active" && (fDept === "all" || p.department_id === fDept))
+      .map((p) => p.code);
+  }, [programsList, fDept]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -249,11 +263,11 @@ function SubjectsPage() {
           </SelectContent>
         </Select>
         <Select value={fProgram === "all" ? undefined : fProgram} onValueChange={setFProgram}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={subjectPrograms.programs.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder={programOptions.length === 0 ? "No records added." : "Select Program/Course"} /></SelectTrigger>
           <SelectContent>
-            {subjectPrograms.programs.length === 0 ? (
+            {programOptions.length === 0 ? (
               <div className="px-2 py-1.5 text-xs text-muted-foreground">No records added.</div>
-            ) : subjectPrograms.programs.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            ) : programOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
           </SelectContent>
         </Select>
         {(search || fDept !== "all" || fProgram !== "all") && (

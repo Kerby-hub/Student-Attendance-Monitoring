@@ -157,23 +157,10 @@ function StudentsPage() {
 
   // Dependent option lists: Department → Program → Year → Section
   const programs = useMemo(() => {
-    const set = new Set<string>();
-    sections.forEach((s) => {
-      if (!s.program) return;
-      if (filterDept !== "all" && s.department_id !== filterDept) return;
-      set.add(s.program);
-    });
-    // include programs referenced by existing students matching the dept filter
-    students.forEach((s) => {
-      if (!s.program) return;
-      if (filterDept !== "all") {
-        const sec = sections.find((x) => x.id === s.section_id);
-        if (!sec || sec.department_id !== filterDept) return;
-      }
-      set.add(s.program);
-    });
-    return Array.from(set).sort();
-  }, [students, sections, filterDept]);
+    return programsList
+      .filter((p) => p.status === "active" && (filterDept === "all" || p.department_id === filterDept))
+      .map((p) => p.code);
+  }, [programsList, filterDept]);
 
   const yearOptions = useMemo(() => {
     const set = new Set<number>();

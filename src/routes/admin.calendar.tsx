@@ -384,7 +384,7 @@ function EventFormDialog({
   open: boolean;
   initial: Partial<EventRow> | null;
   onClose: () => void;
-  onSubmit: (v: EventFormValues) => void;
+  onSubmit: (v: EventFormValues) => Promise<unknown> | void;
   submitting: boolean;
 }) {
   const start = initial?.starts_at ? toLocalParts(initial.starts_at) : { date: ymd(new Date()), time: "09:00" };

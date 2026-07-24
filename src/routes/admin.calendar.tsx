@@ -116,7 +116,7 @@ function AdminCalendarPage() {
           .eq("starts_at", input.starts_at!)
           .eq("ends_at", input.ends_at!)
           .eq("audience", input.audience!)
-          .eq("created_by", user?.id ?? null)
+          .eq("created_by", user?.id ?? "")
           .limit(1)
           .maybeSingle();
         if (dup?.id) return;

@@ -418,13 +418,11 @@ function EventFormDialog({
 
   const initialDate = start.date;
   const submittingRef = useRef(false);
-  const submit = () => {
+  const submit = async () => {
     if (submitting || submittingRef.current) return; // guard against double-submit
     const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = "Event title is required.";
     if (!date) errs.date = "Start date is required.";
-    // Past-date guard: allow keeping an existing past date, but block creating
-    // or moving events to a date earlier than today.
     const todayStr = ymd(new Date());
     const isNewOrDateChanged = !initial?.id || date !== initialDate;
     if (date && isNewOrDateChanged && date < todayStr) {
@@ -437,21 +435,19 @@ function EventFormDialog({
     }
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
-      // focus first invalid
       const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
       first?.focus();
       return;
     }
     submittingRef.current = true;
     try {
-      onSubmit({
+      await onSubmit({
         title: title.trim(), description: description.trim(),
         audience, event_type: eventType, location: location.trim(),
         starts_at: startsIso, ends_at: endsIso,
       });
     } finally {
-      // Release on next tick so React commits the parent's submitting state.
-      setTimeout(() => { submittingRef.current = false; }, 0);
+      submittingRef.current = false;
     }
   };
 

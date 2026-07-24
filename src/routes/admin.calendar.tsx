@@ -458,7 +458,11 @@ function EventFormDialog({
           <DialogTitle>{initial?.id ? "Edit event" : "New event"}</DialogTitle>
           <DialogDescription>Visible to the selected audience on their calendars.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3">
+        <form
+          onSubmit={(e) => { e.preventDefault(); void submit(); }}
+        >
+          <fieldset disabled={submitting} className="contents">
+            <div className="grid gap-3">
           <div>
             <Label>Title<RequiredMark /></Label>
             <Input
@@ -473,7 +477,7 @@ function EventFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Type</Label>
-              <Select value={eventType} onValueChange={setEventType}>
+              <Select value={eventType} onValueChange={setEventType} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
                   {EVENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -482,7 +486,7 @@ function EventFormDialog({
             </div>
             <div>
               <Label>Audience</Label>
-              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Everyone</SelectItem>
@@ -533,11 +537,15 @@ function EventFormDialog({
             <Label>Description</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button onClick={submit} disabled={submitting}>{submitting ? "Saving…" : "Save event"}</Button>
-        </DialogFooter>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+              <Button type="submit" disabled={submitting} aria-busy={submitting}>
+                {submitting ? (initial?.id ? "Saving…" : "Creating…") : (initial?.id ? "Save changes" : "Create event")}
+              </Button>
+            </DialogFooter>
+          </fieldset>
+        </form>
       </DialogContent>
     </Dialog>
   );

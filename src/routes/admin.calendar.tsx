@@ -299,8 +299,8 @@ function AdminCalendarPage() {
       <EventFormDialog
         open={!!creating || !!editing}
         initial={editing ?? (creating ? { starts_at: combineDateTime(creating.date!, "09:00"), ends_at: combineDateTime(creating.date!, "10:00") } as any : null)}
-        onClose={() => { setEditing(null); setCreating(null); }}
-        onSubmit={(values) => upsert.mutate({ ...values, id: editing?.id })}
+        onClose={() => { if (upsert.isPending) return; setEditing(null); setCreating(null); }}
+        onSubmit={(values) => upsert.mutateAsync({ ...values, id: editing?.id })}
         submitting={upsert.isPending}
       />
 

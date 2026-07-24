@@ -107,6 +107,19 @@ function AdminCalendarPage() {
         }).eq("id", input.id);
         if (error) throw error;
       } else {
+        // Server-side duplicate guard: skip insert if an identical event
+        // already exists (same title/time/audience by the same creator).
+        const { data: dup } = await supabase
+          .from("calendar_events")
+          .select("id")
+          .eq("title", input.title!)
+          .eq("starts_at", input.starts_at!)
+          .eq("ends_at", input.ends_at!)
+          .eq("audience", input.audience!)
+          .eq("created_by", user?.id ?? null)
+          .limit(1)
+          .maybeSingle();
+        if (dup?.id) return;
         const { error } = await supabase.from("calendar_events").insert({
           title: input.title!, description: input.description ?? null,
           starts_at: input.starts_at!, ends_at: input.ends_at!,

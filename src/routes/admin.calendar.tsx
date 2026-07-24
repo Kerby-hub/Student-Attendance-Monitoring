@@ -107,6 +107,19 @@ function AdminCalendarPage() {
         }).eq("id", input.id);
         if (error) throw error;
       } else {
+        // Server-side duplicate guard: skip insert if an identical event
+        // already exists (same title/time/audience by the same creator).
+        const { data: dup } = await supabase
+          .from("calendar_events")
+          .select("id")
+          .eq("title", input.title!)
+          .eq("starts_at", input.starts_at!)
+          .eq("ends_at", input.ends_at!)
+          .eq("audience", input.audience!)
+          .eq("created_by", user?.id ?? "")
+          .limit(1)
+          .maybeSingle();
+        if (dup?.id) return;
         const { error } = await supabase.from("calendar_events").insert({
           title: input.title!, description: input.description ?? null,
           starts_at: input.starts_at!, ends_at: input.ends_at!,
@@ -286,8 +299,8 @@ function AdminCalendarPage() {
       <EventFormDialog
         open={!!creating || !!editing}
         initial={editing ?? (creating ? { starts_at: combineDateTime(creating.date!, "09:00"), ends_at: combineDateTime(creating.date!, "10:00") } as any : null)}
-        onClose={() => { setEditing(null); setCreating(null); }}
-        onSubmit={(values) => upsert.mutate({ ...values, id: editing?.id })}
+        onClose={() => { if (upsert.isPending) return; setEditing(null); setCreating(null); }}
+        onSubmit={(values) => upsert.mutateAsync({ ...values, id: editing?.id })}
         submitting={upsert.isPending}
       />
 
@@ -371,7 +384,7 @@ function EventFormDialog({
   open: boolean;
   initial: Partial<EventRow> | null;
   onClose: () => void;
-  onSubmit: (v: EventFormValues) => void;
+  onSubmit: (v: EventFormValues) => Promise<unknown> | void;
   submitting: boolean;
 }) {
   const start = initial?.starts_at ? toLocalParts(initial.starts_at) : { date: ymd(new Date()), time: "09:00" };
@@ -405,13 +418,11 @@ function EventFormDialog({
 
   const initialDate = start.date;
   const submittingRef = useRef(false);
-  const submit = () => {
+  const submit = async () => {
     if (submitting || submittingRef.current) return; // guard against double-submit
     const errs: Record<string, string> = {};
     if (!title.trim()) errs.title = "Event title is required.";
     if (!date) errs.date = "Start date is required.";
-    // Past-date guard: allow keeping an existing past date, but block creating
-    // or moving events to a date earlier than today.
     const todayStr = ymd(new Date());
     const isNewOrDateChanged = !initial?.id || date !== initialDate;
     if (date && isNewOrDateChanged && date < todayStr) {
@@ -424,21 +435,19 @@ function EventFormDialog({
     }
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
-      // focus first invalid
       const first = document.querySelector<HTMLElement>('[aria-invalid="true"]');
       first?.focus();
       return;
     }
     submittingRef.current = true;
     try {
-      onSubmit({
+      await onSubmit({
         title: title.trim(), description: description.trim(),
         audience, event_type: eventType, location: location.trim(),
         starts_at: startsIso, ends_at: endsIso,
       });
     } finally {
-      // Release on next tick so React commits the parent's submitting state.
-      setTimeout(() => { submittingRef.current = false; }, 0);
+      submittingRef.current = false;
     }
   };
 
@@ -449,7 +458,11 @@ function EventFormDialog({
           <DialogTitle>{initial?.id ? "Edit event" : "New event"}</DialogTitle>
           <DialogDescription>Visible to the selected audience on their calendars.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3">
+        <form
+          onSubmit={(e) => { e.preventDefault(); void submit(); }}
+        >
+          <fieldset disabled={submitting} className="contents">
+            <div className="grid gap-3">
           <div>
             <Label>Title<RequiredMark /></Label>
             <Input
@@ -464,7 +477,7 @@ function EventFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Type</Label>
-              <Select value={eventType} onValueChange={setEventType}>
+              <Select value={eventType} onValueChange={setEventType} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
                   {EVENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -473,7 +486,7 @@ function EventFormDialog({
             </div>
             <div>
               <Label>Audience</Label>
-              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+              <Select value={audience} onValueChange={(v) => setAudience(v as Audience)} disabled={submitting}>
                 <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Everyone</SelectItem>
@@ -524,11 +537,15 @@ function EventFormDialog({
             <Label>Description</Label>
             <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button onClick={submit} disabled={submitting}>{submitting ? "Saving…" : "Save event"}</Button>
-        </DialogFooter>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+              <Button type="submit" disabled={submitting} aria-busy={submitting}>
+                {submitting ? (initial?.id ? "Saving…" : "Creating…") : (initial?.id ? "Save changes" : "Create event")}
+              </Button>
+            </DialogFooter>
+          </fieldset>
+        </form>
       </DialogContent>
     </Dialog>
   );
